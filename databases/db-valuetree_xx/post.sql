@@ -1,0 +1,11 @@
+insert into t1 values  (11, null, null);
+insert into t1 values  (12, 11, null);
+insert into t1 values  (13, 11, null);
+insert into t1 values  (14, 11, 4000);
+insert into t1 values  (15, 12, 1000);
+insert into t1 values  (16, 12, 1100);
+insert into t1 values  (17, 13, null);
+insert into t1 values  (18, 13, 300);
+insert into t1 values  (19, 17, 500);
+insert into t1 values  (20, 17, 501);
+insert into t1 values  (21, 17, 502);

@@ -1,0 +1,10 @@
+tables:
+  - name: tree0
+    columns:
+      - name: id
+        type: INTEGER
+      - name: p
+        type: INTEGER
+      - name: v
+        type: INTEGER
+    primary_key: [id] 

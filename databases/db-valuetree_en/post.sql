@@ -1,0 +1,11 @@
+insert into tree0 values  (11, null, null);
+insert into tree0 values  (12, 11, null);
+insert into tree0 values  (13, 11, null);
+insert into tree0 values  (14, 11, 4000);
+insert into tree0 values  (15, 12, 1000);
+insert into tree0 values  (16, 12, 1100);
+insert into tree0 values  (17, 13, null);
+insert into tree0 values  (18, 13, 300);
+insert into tree0 values  (19, 17, 500);
+insert into tree0 values  (20, 17, 501);
+insert into tree0 values  (21, 17, 502);

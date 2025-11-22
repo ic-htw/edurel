@@ -1,0 +1,10 @@
+tables:
+  - name: t1
+    columns:
+      - name: id
+        type: INTEGER
+      - name: x1
+        type: INTEGER
+      - name: x2
+        type: INTEGER
+    primary_key: [id] 

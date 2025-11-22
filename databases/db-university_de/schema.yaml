@@ -1,0 +1,41 @@
+tables:
+  - name: semester
+    columns:
+      - name: sid
+        type: INTEGER
+      - name: bez
+        type: VARCHAR
+        constraints: "NOT NULL"
+    primary_key: [sid]
+
+  - name: modul
+    columns:
+      - name: mid
+        type: INTEGER
+      - name: bez
+        type: VARCHAR
+        constraints: "NOT NULL"
+    primary_key: [mid]
+
+  - name: kurs
+    columns:
+      - name: kid
+        type: INTEGER
+      - name: sid
+        type: INTEGER
+        constraints: "NOT NULL"
+      - name: mid
+        type: INTEGER
+        constraints: "NOT NULL"
+    primary_key: [kid]
+    foreign_keys:
+      - name: fk_kurs_semester
+        columns: [sid]
+        ref_table: semester
+        ref_columns: [sid]
+      - name: fk_kurs_modul
+        columns: [mid]
+        ref_table: modul
+        ref_columns: [mid]
+
+  

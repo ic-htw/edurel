@@ -1,0 +1,28 @@
+{% for table in tables %}
+CREATE TABLE {{ table.name }} (
+{% for col in table.columns %}
+    {{ col.name }} {{ col.type }}{% if col.constraints %} {{ col.constraints }}{% endif %}{% if not loop.last or table.primary_key or table.foreign_keys %},{% endif %}
+
+{% endfor %}
+{% if table.primary_key %}
+    PRIMARY KEY ({{ table.primary_key | join(', ') }}){% if table.foreign_keys %},{% endif %}
+{% endif %}
+
+{% if table.foreign_keys %}
+{% for fk in table.foreign_keys %}
+    CONSTRAINT {{ fk.name }}
+        FOREIGN KEY ({{ fk.columns | join(', ') }})
+        REFERENCES {{ fk.ref_table }}({{ fk.ref_columns | join(', ') }}){% if not loop.last %},{% endif %}
+        
+{% endfor %}
+{% endif %}
+);
+
+{% if table.indexes %}
+{% for idx in table.indexes %}
+CREATE {% if idx.unique %}UNIQUE {% endif %}INDEX {{ idx.name }}
+    ON {{ table.name }} ({{ idx.columns | join(', ') }});
+{% endfor %}
+{% endif %}
+
+{% endfor %}
