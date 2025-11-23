@@ -14,19 +14,28 @@ def sql_df(con, sql):
 # ---------------------------------------------------------------------------------------------
 # Connect to DuckDB in-memory or file-based
 # ---------------------------------------------------------------------------------------------
-def duckdb_mem_con(db_path: str) -> duckdb.DuckDBPyConnection:
-    schema_path = Path(db_path) / "schema.sql"
-    if not schema_path.exists():
-        print("No schema.sql. Creating empty in-memory database.")
+def duckdb_mem_con(db_path: str = None, verbose: bool = False) -> duckdb.DuckDBPyConnection:
     con = duckdb.connect(database=':memory:', read_only=False)
-    with schema_path.open("r", encoding="utf-8") as f:
-        con.execute(f.read())
+    if db_path is None:
+        if verbose:
+            print("No db_path. Creating empty in-memory database.")
+        return con
+
+    schema_path = Path(db_path) / "schema.sql"
+    if schema_path.exists():
+        with schema_path.open("r", encoding="utf-8") as f:
+            con.execute(f.read())
+    else:
+        if verbose:
+            print("No schema.sql. Creating empty in-memory database.")
 
     post_path = Path(db_path) / "post.sql"
-    if not post_path.exists():
-        print("No post.sql. Skipping post-processing.")
-    with post_path.open("r", encoding="utf-8") as f:
-        con.execute(f.read())
+    if post_path.exists():
+        with post_path.open("r", encoding="utf-8") as f:
+            con.execute(f.read())
+    else:
+        if verbose:
+            print("No post.sql. Skipping post-processing.")
     return con
 
 def duckdb_file_con(db_path: str) -> duckdb.DuckDBPyConnection:
@@ -65,3 +74,38 @@ def duckdb_schema(con):
     for table_name_src, col_names_src, table_name_trg, col_names_trg in fks:
         schema += f"Foreign Key: {table_name_src}({col_names_src}) -> {table_name_trg}({col_names_trg})\n"
     return schema
+
+# ---------------------------------------------------------------------------------------------
+# Read multiple files into DuckDB tables. Exports to Parquet if out_path is provided
+# ---------------------------------------------------------------------------------------------
+def db_file_op(in_path: str, fn: str, suffix: str, spec: str, show: bool = False, out_path: str = None):
+    if in_path is None:
+        raise ValueError("in_path must be provided")
+    p = Path(in_path)
+    if not p.is_dir():
+        raise ValueError(f"in_path {in_path} is not a directory")
+    
+    if fn == "*":
+        files = sorted([f.name for f in p.iterdir() if f.is_file()])
+        tns = [Path(f).stem for f in files]
+    else: 
+        tns = list(fn)
+    if len(files) == 0:
+        raise ValueError(f"No files found in {in_path} with fn={fn} and suffix={suffix}")
+    
+    con = duckdb_mem_con()
+    for tn in tns:
+        f = p / f"{tn}{suffix}"
+        sql_read = f"""
+        create or replace table {tn} as
+        select * from read_csv('{str(f)}', {spec});
+        """
+        con.execute(sql_read)
+
+        if show is not None:
+            print(f"Table: {tn}")
+            sql_print(con, f"select * from {tn} limit 2;")
+
+        if out_path is not None:
+            out_f = Path(out_path) / f"{tn}.parquet"
+            con.execute(f"COPY (SELECT * FROM {tn}) TO '{str(out_f)}' (FORMAT 'parquet');")
