@@ -93,19 +93,19 @@ def db_file_op(in_path: str, fn: str, suffix: str, spec: str, show: bool = False
     if len(files) == 0:
         raise ValueError(f"No files found in {in_path} with fn={fn} and suffix={suffix}")
     
-    con = duckdb_mem_con()
-    for tn in tns:
-        f = p / f"{tn}{suffix}"
-        sql_read = f"""
-        create or replace table {tn} as
-        select * from read_csv('{str(f)}', {spec});
-        """
-        con.execute(sql_read)
-
-        if show is not None:
-            print(f"Table: {tn}")
-            sql_print(con, f"select * from {tn} limit 2;")
-
-        if out_path is not None:
-            out_f = Path(out_path) / f"{tn}.parquet"
-            con.execute(f"COPY (SELECT * FROM {tn}) TO '{str(out_f)}' (FORMAT 'parquet');")
+    with duckdb_mem_con() as con:
+        for tn in tns:
+            f = p / f"{tn}{suffix}"
+            sql_read = f"""
+            create or replace table {tn} as
+            select * from read_csv('{str(f)}', {spec});
+            """
+            con.execute(sql_read)
+    
+            if show is not None:
+                print(f"Table: {tn}")
+                sql_print(con, f"select * from {tn} limit 2;")
+    
+            if out_path is not None:
+                out_f = Path(out_path) / f"{tn}.parquet"
+                con.execute(f"COPY (SELECT * FROM {tn}) TO '{str(out_f)}' (FORMAT 'parquet');")
