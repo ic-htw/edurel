@@ -1,6 +1,6 @@
 # Own
-.parquet
-.duckdb
+*.parquet
+*.duckdb
 **/tmp
 **/gitignore
 **/cred*.*
