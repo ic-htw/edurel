@@ -38,16 +38,61 @@ def duckdb_mem_con(db_path: str = None, verbose: bool = False) -> duckdb.DuckDBP
             print("No post.sql. Skipping post-processing.")
     return con
 
-def duckdb_file_con(db_path: str) -> duckdb.DuckDBPyConnection:
+def duckdb_file_con(db_path: str, read_only: bool = True) -> duckdb.DuckDBPyConnection:
     db_file_path = Path(db_path) / "db.duckdb"
     if not db_file_path.exists():
         raise ValueError("No db.duckdb.")
-    con = duckdb.connect(database=str(db_file_path), read_only=True)
+    con = duckdb.connect(database=str(db_file_path), read_only=read_only)
     return con
 
 # ---------------------------------------------------------------------------------------------
-# Database schema extraction for DuckDB
+# Database info
 # ---------------------------------------------------------------------------------------------
+def duckdb_tablenames(con):
+    tables = con.execute("SHOW TABLES").fetchall()
+    return [table[0] for table in tables]
+
+def duckdb_tablenames_print(con):
+    tables = duckdb_tablenames(con)
+    print("\n".join(tables))
+
+# example spec:
+# spec = {
+#     "DimCustomer": "* exclude (NameStyle, SpanishEducation)"
+# }
+# 
+def duckdb_data_print(con, spec: dict = None):
+    for tn in  duckdb_tablenames(con):
+        print(f"{tn}")
+        if spec is  None:
+            columns = "*"
+        else:
+            if tn in spec:
+                columns = spec[tn]
+            else:
+                columns = "*"
+        sql = f"SELECT {columns} FROM {tn} LIMIT 3;"
+        print(con.sql(sql))
+        sql = f"SELECT count(*) FROM {tn} LIMIT 3;"
+        print(f"Number of rows: {con.sql(sql).fetchone()[0]}")
+        print("\n\n")
+
+def duckdb_df_print(con, spec: dict = None):
+    for tn in  duckdb_tablenames(con):
+        print(f"{tn}")
+        if spec is  None:
+            columns = "*"
+        else:
+            if tn in spec:
+                columns = spec[tn]
+            else:
+                columns = "*"
+        sql = f"SELECT {columns} FROM {tn} LIMIT 1;"
+        print(con.execute(sql).df().T)
+        sql = f"SELECT count(*) FROM {tn} LIMIT 3;"
+        print(f"Number of rows: {con.execute(sql).fetchone()[0]}")
+        print("\n\n")
+
 def duckdb_schema(con):
     tables = con.execute("SHOW TABLES").fetchall()
     schema = ""
@@ -74,6 +119,11 @@ def duckdb_schema(con):
     for table_name_src, col_names_src, table_name_trg, col_names_trg in fks:
         schema += f"Foreign Key: {table_name_src}({col_names_src}) -> {table_name_trg}({col_names_trg})\n"
     return schema
+
+def duckdb_schema_print(con):
+    schema = duckdb_schema(con)
+    print(schema)
+
 
 # ---------------------------------------------------------------------------------------------
 # Read multiple files into DuckDB tables. Exports to Parquet if out_path is provided

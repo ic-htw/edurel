@@ -9,6 +9,8 @@ description = "Education Tools for Relational Data"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "numpy",
+    "pandas",
     "pyyaml>=6.0",
     "sqlglot>=28.0",
     "duckdb>=1.4",
