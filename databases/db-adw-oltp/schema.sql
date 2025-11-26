@@ -17,7 +17,7 @@ ModifiedDate TIMESTAMP NOT NULL
 );
 
 CREATE TABLE Shift (
-ShiftID UTINYINT NOT NULL primary key, 
+ShiftID INT NOT NULL primary key, 
 Name TEXT NOT NULL, 
 StartTime TIME NOT NULL, 
 EndTime TIME NOT NULL, 
@@ -66,6 +66,7 @@ Name TEXT NOT NULL,
 ReasonType TEXT NOT NULL, 
 ModifiedDate TIMESTAMP NOT NULL
 );
+
 CREATE TABLE ProductDescription (
 ProductDescriptionID INT NOT NULL primary key, 
 Description TEXT NOT NULL, 
@@ -97,7 +98,7 @@ CREATE TABLE CreditCard (
 CreditCardID INT NOT NULL primary key, 
 CardType TEXT NOT NULL, 
 CardNumber TEXT NOT NULL, 
-ExpMonth UTINYINT NOT NULL, 
+ExpMonth INT NOT NULL, 
 ExpYear SMALLINT NOT NULL, 
 ModifiedDate TIMESTAMP NOT NULL
 );
@@ -151,7 +152,7 @@ CONSTRAINT FK_StateProvince_SalesTerritory_TerritoryID FOREIGN KEY (TerritoryID)
 CREATE TABLE SalesTaxRate (
 SalesTaxRateID INT NOT NULL primary key, 
 StateProvinceID INT NOT NULL, 
-TaxType UTINYINT NOT NULL, 
+TaxType INT NOT NULL, 
 TaxRate DECIMAL(8, 4) NOT NULL,
 Name TEXT NOT NULL, 
 rowguid TEXT, 
@@ -175,7 +176,7 @@ CREATE TABLE Vendor (
 BusinessEntityID INT NOT NULL primary key, 
 AccountNumber TEXT NOT NULL, 
 Name TEXT NOT NULL, 
-CreditRating UTINYINT NOT NULL, 
+CreditRating INT NOT NULL, 
 PreferredVendorStatus BIT NOT NULL, 
 ActiveFlag BIT NOT NULL , 
 PurchasingWebServiceURL TEXT NULL, 
@@ -251,7 +252,7 @@ CONSTRAINT FK_Employee_Person_BusinessEntityID FOREIGN KEY (BusinessEntityID) RE
 CREATE TABLE EmployeeDepartmentHistory (
 BusinessEntityID INT NOT NULL, 
 DepartmentID SMALLINT NOT NULL, 
-ShiftID UTINYINT NOT NULL, 
+ShiftID INT NOT NULL, 
 StartDate DATE NOT NULL, 
 EndDate DATE NULL, 
 ModifiedDate TIMESTAMP NOT NULL, 
@@ -265,7 +266,7 @@ CREATE TABLE EmployeePayHistory (
 BusinessEntityID INT NOT NULL, 
 RateChangeDate TIMESTAMP NOT NULL, 
 Rate DECIMAL(18,4) NOT NULL, 
-PayFrequency UTINYINT NOT NULL, /* 1 = monthly salary, 2 = biweekly salary */
+PayFrequency INT NOT NULL, /* 1 = monthly salary, 2 = biweekly salary */
 ModifiedDate TIMESTAMP NOT NULL, 
 primary key (BusinessEntityID, RateChangeDate),
 CONSTRAINT FK_EmployeePayHistory_Employee_BusinessEntityID FOREIGN KEY (BusinessEntityID) REFERENCES Employee (BusinessEntityID)
@@ -403,7 +404,7 @@ CREATE TABLE ProductInventory (
 ProductID INT NOT NULL, 
 LocationID SMALLINT NOT NULL, 
 Shelf TEXT NOT NULL, 
-Bin UTINYINT NOT NULL, 
+Bin INT NOT NULL, 
 Quantity SMALLINT NOT NULL , 
 rowguid TEXT, 
 ModifiedDate TIMESTAMP NOT NULL, 
@@ -456,8 +457,7 @@ TransactionType TEXT NOT NULL,
 Quantity INT NOT NULL, 
 ActualCost DECIMAL(18, 4) NOT NULL, 
 ModifiedDate TIMESTAMP NOT NULL,
-CONSTRAINT FK_TransactionHistoryArchive_Product_ProductID FOREIGN KEY (ProductID) REFERENCES Product (ProductID),
-
+CONSTRAINT FK_TransactionHistoryArchive_Product_ProductID FOREIGN KEY (ProductID) REFERENCES Product (ProductID)
 );
 
 CREATE TABLE SpecialOffer (
@@ -579,8 +579,8 @@ CONSTRAINT FK_Customer_SalesTerritory_TerritoryID FOREIGN KEY (TerritoryID) REFE
  4 = Complete */
 CREATE TABLE PurchaseOrderHeader (
 PurchaseOrderID INT NOT NULL primary key, 
-RevisionNumber UTINYINT NOT NULL, 
-Status UTINYINT NOT NULL, 
+RevisionNumber INT NOT NULL, 
+Status INT NOT NULL, 
 EmployeeID INT NOT NULL, 
 VendorID INT NOT NULL, 
 ShipMethodID INT NOT NULL, 
@@ -590,7 +590,7 @@ SubTotal DECIMAL(18,4) NOT NULL ,
 TaxAmt DECIMAL(18,4) NOT NULL , 
 Freight DECIMAL(18,4) NOT NULL , 
 TotalDue DECIMAL(18,4) NOT NULL, 
-ModifiedDate TIMESTAMP NOT NULL, 
+ModifiedDate TIMESTAMP NOT NULL
 );
 
 CREATE TABLE PurchaseOrderDetail (
@@ -612,11 +612,11 @@ CONSTRAINT FK_PurchaseOrderDetail_PurchaseOrderHeader_PurchaseOrderID FOREIGN KE
 
 CREATE TABLE SalesOrderHeader (
 SalesOrderID INT NOT NULL primary key, 
-RevisionNumber UTINYINT NOT NULL , 
+RevisionNumber INT NOT NULL , 
 OrderDate TIMESTAMP NOT NULL, 
 DueDate TIMESTAMP NOT NULL, 
 ShipDate TIMESTAMP NULL, 
-Status UTINYINT NOT NULL , 
+Status INT NOT NULL , 
 OnlineOrderFlag BIT NOT NULL , 
 SalesOrderNumber TEXT NOT NULL, 
 PurchaseOrderNumber TEXT NULL, 

@@ -1,6 +1,8 @@
 import duckdb
 from pathlib import Path
 
+import yaml
+
 # ---------------------------------------------------------------------------------------------
 # Query utils
 # ---------------------------------------------------------------------------------------------
@@ -113,7 +115,7 @@ def duckdb_schema(con):
         referenced_table as table_name_trg,
         list_aggregate(referenced_column_names, 'string_agg', ', ') as col_names_trg,
       from duckdb_constraints() where constraint_type = 'FOREIGN KEY';
-  """
+    """
 
     fks = con.execute(sql).fetchall()
     for table_name_src, col_names_src, table_name_trg, col_names_trg in fks:
@@ -124,6 +126,129 @@ def duckdb_schema_print(con):
     schema = duckdb_schema(con)
     print(schema)
 
+def duckdb_columns(con):
+    tables = con.execute("SHOW TABLES").fetchall()
+    table_dict = {}
+    for (table_name,) in tables:
+        columns = con.execute(f"DESCRIBE {table_name}").fetchall()
+        columns_list = []
+        for col_name, col_type, nvl, _, _, _ in columns:
+            column_dict = {
+                "name": col_name,
+                "type": col_type,
+                "nullable": nvl != "NO"
+            }
+            columns_list.append(column_dict)
+
+        table_dict[table_name] = columns_list
+        
+    return table_dict
+
+def duckdb_primary_keys(con):
+    sql_pk = """
+    select
+      table_name,
+      list_aggregate(constraint_column_names, 'string_agg', ', ') as col_names
+    from duckdb_constraints() where constraint_type = 'PRIMARY KEY'
+    group by table_name, constraint_column_names
+    order by table_name;
+    """
+
+    pks = con.execute(sql_pk).fetchall()
+    pk_dict = {}
+    for table_name, col_names in pks:
+        pk_dict[table_name] = [col.strip() for col in col_names.split(",")]
+    return pk_dict
+
+def duckdb_foreign_keys(con):
+    sql_fk = """
+    select
+      table_name as table_name_src,
+      list_aggregate(constraint_column_names, 'string_agg', ', ') as col_names_src,
+      referenced_table as table_name_trg,
+      list_aggregate(referenced_column_names, 'string_agg', ', ') as col_names_trg
+    from duckdb_constraints() where constraint_type = 'FOREIGN KEY';
+    """   
+
+    fks = con.execute(sql_fk).fetchall()
+    fk_dict = {}
+    for table_name_src, col_names_src, table_name_trg, col_names_trg in fks:
+        src_cols = [col.strip() for col in col_names_src.split(",")]
+        trg_cols = [col.strip() for col in col_names_trg.split(",")]
+        trg_dict = {table_name_trg: [src_cols, trg_cols]}
+        if table_name_src not in fk_dict:
+            fk_dict[table_name_src] = [trg_dict]
+        else:
+            fk_dict[table_name_src].append(trg_dict)
+
+    return fk_dict
+
+def duckdb_schema_yaml(con):
+    """Return database schema as a dictionary suitable for YAML serialization."""
+    tables = con.execute("SHOW TABLES").fetchall()
+    schema_dict = {"tables": [], "primary_keys": [], "foreign_keys": []}
+
+    # Process tables and columns
+    # for (table_name,) in tables:
+    #     columns = con.execute(f"DESCRIBE {table_name}").fetchall()
+    #     table_dict = {
+    #         "name": table_name,
+    #         "columns": []
+    #     }
+
+    #     for col_name, col_type, nvl, _, _, _ in columns:
+    #         column_dict = {
+    #             "name": col_name,
+    #             "type": col_type,
+    #             "nullable": nvl != "NO"
+    #         }
+    #         table_dict["columns"].append(column_dict)
+
+    #     schema_dict["tables"].append(table_dict)
+
+    # Process primary keys
+    sql_pk = """
+      select
+        table_name,
+        list_aggregate(constraint_column_names, 'string_agg', ', ') as col_names
+      from duckdb_constraints() where constraint_type = 'PRIMARY KEY'
+      group by table_name, constraint_column_names;
+    """
+
+    pks = con.execute(sql_pk).fetchall()
+    for table_name, col_names in pks:
+        pk_dict = {
+            "table": table_name,
+            "columns": [col.strip() for col in col_names.split(",")]
+        }
+        schema_dict["primary_keys"].append(pk_dict)
+
+    # Process foreign keys
+    # sql_fk = """
+    #   select
+    #     table_name as table_name_src,
+    #     list_aggregate(constraint_column_names, 'string_agg', ', ') as col_names_src,
+    #     referenced_table as table_name_trg,
+    #     list_aggregate(referenced_column_names, 'string_agg', ', ') as col_names_trg
+    #   from duckdb_constraints() where constraint_type = 'FOREIGN KEY';
+    # """
+
+    # fks = con.execute(sql_fk).fetchall()
+    # for table_name_src, col_names_src, table_name_trg, col_names_trg in fks:
+    #     fk_dict = {
+    #         "source_table": table_name_src,
+    #         "source_columns": [col.strip() for col in col_names_src.split(",")],
+    #         "target_table": table_name_trg,
+    #         "target_columns": [col.strip() for col in col_names_trg.split(",")]
+    #     }
+    #     schema_dict["foreign_keys"].append(fk_dict)
+
+    return schema_dict
+
+def duckdb_schema_yaml_print(con):
+    schema_dict = duckdb_schema_yaml(con)
+    yaml_string = yaml.dump(schema_dict, default_flow_style=False, sort_keys=False)
+    print(yaml_string)
 
 # ---------------------------------------------------------------------------------------------
 # Read multiple files into DuckDB tables. Exports to Parquet if out_path is provided
