@@ -75,26 +75,6 @@ manager.display()
 selected = manager.get_selected_items()
 ```
 
-### SQL-to-YAML Transpiler
-The `sql_to_yaml` module (`src/edurel/sql_to_yaml.py`) converts SQL DDL statements to YAML format:
-- Parses SQL DDL statements using sqlglot
-- Extracts table schemas, columns, constraints, and relationships
-- Generates YAML representation with:
-  - Table definitions with columns and types
-  - Column constraints (NOT NULL, UNIQUE, PRIMARY KEY, DEFAULT, AUTO_INCREMENT)
-  - Primary keys (including compound keys)
-  - Foreign keys (including compound keys)
-- Supports ALTER TABLE statements for foreign key constraints
-
-Usage pattern:
-```python
-from edurel.sql_to_yaml import sql_to_yaml
-# Convert SQL to YAML string
-yaml_output = sql_to_yaml('schema.sql', dialect='postgres')
-# Or write directly to file
-sql_to_yaml('schema.sql', dialect='postgres', yaml_path='schema.yaml')
-```
-
 ## Code Style
 - Line length: 88 characters (Black default)
 - Target Python version: 3.8+ (for compatibility)

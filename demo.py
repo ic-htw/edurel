@@ -1,6 +1,6 @@
 from pathlib import Path
 import sqlglot
-from edurel.sql_to_yaml import sql_to_yaml
+from edurel.utils.sql_to_yaml import sql_to_yaml
 
 
 BASE_DIR = "/home/basis/work/github/edurel"
