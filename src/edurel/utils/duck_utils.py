@@ -256,7 +256,7 @@ def schema_yaml(con):
                 'tables': [
                     {
                         'name': str,
-                        'columns': [{'name': str, 'type': str, 'nullable': bool}],
+                        'columns': [{'col': str, 'type': str, 'nullable': bool}],
                         'primary_key': [str],  # optional
                         'foreign_keys': [      # optional
                             {

@@ -4,6 +4,7 @@ Mermaid Visualization Widget
 A simple Jupyter notebook widget for visualizing Mermaid diagrams.
 """
 from typing import Optional
+import uuid
 import ipywidgets as widgets
 from IPython.display import display, HTML
 
@@ -11,14 +12,9 @@ from IPython.display import display, HTML
 class MermaidVisualizer:
     """
     A widget for visualizing Mermaid diagrams from code.
-
-    Features:
-    - Text input pane for entering Mermaid diagram code
-    - Button to render the diagram
-    - Graphical output pane displaying the rendered diagram
     """
 
-    def __init__(self, initial_code: str = ""):
+    def __init__(self, initial_code: str = "", width: str = "100%", height: str = "500px"):
         """
         Initialize the MermaidVisualizer widget.
 
@@ -26,11 +22,37 @@ class MermaidVisualizer:
             initial_code: Optional initial Mermaid code to display
         """
         self.mermaid_code: str = initial_code
+        self.width: str = width
+        self.height: str = height
 
         # Create UI components
         self._create_widgets()
         self._setup_handlers()
+        self._mermaid_init_js()
 
+    def _mermaid_init_js(self):
+        display(HTML("""
+        <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+        <script>
+        if (typeof mermaid !== 'undefined') {
+            mermaid.initialize({ startOnLoad: true });
+        }
+        </script>
+        """))
+
+    def _mermaid_html(self):
+        div_id = f"mermaid_{uuid.uuid4().hex}"
+        return HTML(f"""
+        <div id="{div_id}" class="mermaid">
+        {self.mermaid_code}
+        </div>
+        <script>
+        if (typeof mermaid !== 'undefined') {{
+            mermaid.init(undefined, "#{div_id}");
+        }}
+        </script>
+        """)
+        
     def _create_widgets(self):
         """Create all UI widgets."""
         # Text input pane for Mermaid code
@@ -51,7 +73,7 @@ class MermaidVisualizer:
 
         # Graphical output pane
         self.graph_output = widgets.Output(
-            layout=widgets.Layout(width='100%', height='500px', border='1px solid #ddd')
+            layout=widgets.Layout(width=self.width, height=self.height)
         )
 
     def _setup_handlers(self):
@@ -71,38 +93,14 @@ class MermaidVisualizer:
             return
 
         try:
-            html_content = self._create_mermaid_html(self.mermaid_code)
-
             with self.graph_output:
-                display(HTML(html_content))
+                display(self._mermaid_html())
 
         except Exception as e:
             with self.graph_output:
                 print(f"❌ Error visualizing diagram: {e}")
 
-    def _create_mermaid_html(self, mermaid_code: str) -> str:
-        """
-        Create HTML with Mermaid.js to render the diagram.
-
-        Args:
-            mermaid_code: Mermaid diagram code
-
-        Returns:
-            HTML string with embedded Mermaid diagram
-        """
-        html = f"""
-        <div class="mermaid-container">
-            <script type="module">
-                import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-                mermaid.initialize({{ startOnLoad: true, theme: 'default' }});
-            </script>
-            <div class="mermaid">
-{mermaid_code}
-            </div>
-        </div>
-        """
-        return html
-
+   
     def display(self):
         """Display the widget in the notebook."""
         input_section = widgets.VBox([
