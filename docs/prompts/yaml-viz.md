@@ -1,8 +1,5 @@
-### create a function schema_yaml(con)
-- returns database schema as a dictionary suitable for YAML serialization
-- the function has the following parameters
-  - con: connection to duckdb database
-- the yaml dump from the dictionary should have following structure
+### create a jupyter notebook widget
+- that has a file selector to read in a yaml file with the following structure
   ```yaml
   tables:
   - name: users
@@ -44,5 +41,8 @@
       ref_columns:
       - id
   ```
-- compound primary keys should be possible
-- compound foreign keys should be possible
+- this yaml file represents a relational data model
+- the widget should have an text output pane1 and a button1
+- clicking button1 the yaml should be turned into a graphical langage representaion and put in the text output pane
+- the widget should have a graphical output pane1 and a button1
+- clicking button2 the graphical langage representaion should be visualized in the output pane2

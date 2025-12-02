@@ -1,0 +1,18 @@
+tables:
+- name: users
+  columns:
+  - name: id
+    type: INTEGER
+    nullable: false
+  - name: username
+    type: TEXT
+    nullable: false
+  - name: email
+    type: TEXT
+    nullable: false
+  - name: created_at
+    type: DATETIME
+    nullable: true
+  primary_key:
+  - id
+
