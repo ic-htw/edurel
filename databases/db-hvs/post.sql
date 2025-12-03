@@ -172,25 +172,25 @@ INSERT INTO kurs (kid, modul_mid, semester_sid) VALUES
 (7, 6, 3);  -- Mobile Computing im WS 2024/25
 
 -- Lehrpersonen
-INSERT INTO lehrperson (prid, datumbeginn, datumende, pid, rid, steuernummer) VALUES
-(1, '2020-01-01', NULL, 1, 1, 'DE123456789'),
-(2, '2021-03-01', NULL, 2, 2, 'DE987654321'),
-(3, '2019-09-01', NULL, 3, 1, 'DE456789123'),
-(4, '2022-01-01', NULL, 4, 2, 'DE321654987');
+INSERT INTO lehrperson (prid, steuernummer) VALUES
+(1, 'DE123456789'),
+(2, 'DE987654321'),
+(3, 'DE456789123'),
+(4, 'DE321654987');
 
 -- Sonstige
-INSERT INTO sonstige (prid, datumbeginn, datumende, pid, rid) VALUES
-(11, '2018-01-01', NULL, 11, 4),
-(12, '2017-01-01', NULL, 12, 5);
+INSERT INTO sonstige (prid) VALUES
+(11),
+(12);
 
 -- Studentinnen
-INSERT INTO studentin (prid, datumbeginn, datumende, pid, rid, matrnr) VALUES
-(5, '2023-10-01', NULL, 5, 3, '1001'),
-(6, '2023-10-01', NULL, 6, 3, '1002'),
-(7, '2023-10-01', NULL, 7, 3, '1003'),
-(8, '2023-10-01', NULL, 8, 3, '1004'),
-(9, '2023-10-01', NULL, 9, 3, '1005'),
-(10, '2023-10-01', NULL, 10, 3, '1006');
+INSERT INTO studentin (prid, matrnr) VALUES
+(5, '1001'),
+(6, '1002'),
+(7, '1003'),
+(8, '1004'),
+(9, '1005'),
+(10, '1006');
 
 -- Wochentermine
 INSERT INTO wochentermin (tid, zeitblock_zbid, tag_tid) VALUES

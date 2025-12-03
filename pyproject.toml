@@ -18,6 +18,10 @@ dependencies = [
     "openai>=2.8",
     "anthropic>=0.74",
     "google-genai>=1.52",
+    "langchain-core>=1.1",
+    "langchain-core>=1.1",
+    "langchain-openai>=1.1",
+    "langchain-anthropic>=1.2",
 ]
 
 [project.optional-dependencies]

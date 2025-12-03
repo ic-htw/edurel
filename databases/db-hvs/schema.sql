@@ -121,10 +121,6 @@ CREATE TABLE kurs (
 
 CREATE TABLE lehrperson (
     prid         INTEGER NOT NULL,
-    datumbeginn  DATE NOT NULL,
-    datumende    DATE,
-    pid          INTEGER NOT NULL,
-    rid          INTEGER NOT NULL,
     steuernummer TEXT NOT NULL,
     CONSTRAINT lehrperson_pk PRIMARY KEY ( prid ),
     CONSTRAINT lehrperson_personenrolle_fk FOREIGN KEY ( prid ) REFERENCES personenrolle ( prid )
@@ -132,20 +128,12 @@ CREATE TABLE lehrperson (
 
 CREATE TABLE sonstige (
     prid        INTEGER NOT NULL,
-    datumbeginn DATE NOT NULL,
-    datumende   DATE,
-    pid         INTEGER NOT NULL,
-    rid         INTEGER NOT NULL,
     CONSTRAINT sonstige_pk PRIMARY KEY ( prid ),
     CONSTRAINT sonstige_personenrolle_fk FOREIGN KEY ( prid ) REFERENCES personenrolle ( prid )
 );
 
 CREATE TABLE studentin (
     prid        INTEGER NOT NULL,
-    datumbeginn DATE NOT NULL,
-    datumende   DATE,
-    pid         INTEGER NOT NULL,
-    rid         INTEGER NOT NULL,
     matrnr      TEXT NOT NULL,
     CONSTRAINT studentin_pk PRIMARY KEY ( prid ),
     CONSTRAINT studentin_personenrolle_fk FOREIGN KEY ( prid ) REFERENCES personenrolle ( prid )
