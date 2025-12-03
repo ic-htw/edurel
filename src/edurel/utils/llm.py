@@ -10,14 +10,18 @@ from langchain_core.prompts.chat import ChatPromptTemplate
 # ---------------------------------------------------------------------------------------------
 # LLMs
 # ---------------------------------------------------------------------------------------------
-DEEPSEEK32 = "deepseek-v3.2-exp"
-GEMINI25 ="gemini-2.5-pro"
+DEEPSEEK32 = "deepseek-chat"
+DEEPSEEK32THINKING = "deepseek-reasoner"
+DEEPSEEK32EXP = "deepseek-v3.2-exp"
+GEMINI25PRO ="gemini-2.5-pro"
+GEMINI3PRO ="gemini-3-pro-preview"
 GLM46 = "glm-4.6"
 GPT41MINI = "gpt-4.1-mini-2025-04-14"
 GPT5 = "gpt-5-2025-08-07"
 GPT5MINI = "gpt-5-mini-2025-08-07"
 GROK4 = "grok-4"
 KIMIK2 = "kimi-k2-0905"
+OPUS41 = "claude-opus-4-1-20250805"
 SONNET4 ="claude-sonnet-4-20250514"
 SONNET45 ="claude-sonnet-4-5-20250929"
 
