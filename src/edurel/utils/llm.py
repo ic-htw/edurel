@@ -2,14 +2,19 @@
 # Import / Config
 # ---------------------------------------------------------------------------------------------
 import os
+import httpx
+
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
+from langchain_ollama import ChatOllama
   
-from langchain_core.prompts.chat import ChatPromptTemplate 
+from langchain_core.prompts.chat import ChatPromptTemplate
+
 
 # ---------------------------------------------------------------------------------------------
 # LLMs
 # ---------------------------------------------------------------------------------------------
+ARCTICTEXT2SQL = "a-kore/Arctic-Text2SQL-R1-7B"
 DEEPSEEK32 = "deepseek-chat"
 DEEPSEEK32THINKING = "deepseek-reasoner"
 DEEPSEEK32EXP = "deepseek-v3.2-exp"
@@ -44,6 +49,19 @@ def chat_llm_stats(model, timeout=60, max_retries=0, temperature=0):
         timeout=timeout,
         max_retries=max_retries,
         temperature=temperature,
+    )
+
+def chat_ollama(model, timeout=60, max_retries=0, temperature=0):
+    client = httpx.Client(verify=False)
+
+    return ChatOllama(
+        model=model,
+        # validate_model_on_init=True,
+        timeout=timeout,
+        max_retries=max_retries,
+        temperature=temperature,
+        base_url=os.getenv("OLLAMA_API_URL"),
+        client=client,
     )
 
 def chat_openai(model, timeout=60, max_retries=0, temperature=0):

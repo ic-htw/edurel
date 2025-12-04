@@ -1,0 +1,30 @@
+erDiagram
+    direction LR
+    EmpProj {
+        INTEGER EID PK
+        INTEGER PID PK
+        INTEGER NoOfHoursPerWeek
+    }
+    Employee {
+        INTEGER EID PK
+        INTEGER OUID
+        VARCHAR LastName
+        DATE Hiredate
+        DECIMAL Salary
+        DECIMAL Bonus
+    }
+    OrgUnit {
+        INTEGER OUID PK
+        INTEGER Head
+        INTEGER SuperUnit
+        VARCHAR Name
+    }
+    Project {
+        INTEGER PID PK
+        VARCHAR Title
+        DECIMAL Budget
+    }
+    EmpProj }o--|| Employee : "EID -> EID"
+    EmpProj }o--|| Project : "PID -> PID"
+    Employee }o--|| OrgUnit : "OUID -> OUID"
+    OrgUnit }o--|| Employee : "HEAD -> EID"
