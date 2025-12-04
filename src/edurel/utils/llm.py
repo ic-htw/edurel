@@ -52,8 +52,6 @@ def chat_llm_stats(model, timeout=60, max_retries=0, temperature=0):
     )
 
 def chat_ollama(model, timeout=60, max_retries=0, temperature=0):
-    client = httpx.Client(verify=False)
-
     return ChatOllama(
         model=model,
         # validate_model_on_init=True,
@@ -61,7 +59,7 @@ def chat_ollama(model, timeout=60, max_retries=0, temperature=0):
         max_retries=max_retries,
         temperature=temperature,
         base_url=os.getenv("OLLAMA_API_URL"),
-        client=client,
+        client_kwargs={"verify": False},
     )
 
 def chat_openai(model, timeout=60, max_retries=0, temperature=0):
