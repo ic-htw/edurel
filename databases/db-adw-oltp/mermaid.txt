@@ -1,0 +1,619 @@
+erDiagram
+    Address {
+        INTEGER AddressID PK
+        VARCHAR AddressLine1
+        VARCHAR AddressLine2
+        VARCHAR City
+        INTEGER StateProvinceID
+        VARCHAR PostalCode
+        VARCHAR SpatialLocation
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    AddressType {
+        INTEGER AddressTypeID PK
+        VARCHAR Name
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    BillOfMaterials {
+        INTEGER BillOfMaterialsID PK
+        INTEGER ProductAssemblyID
+        INTEGER ComponentID
+        TIMESTAMP StartDate
+        TIMESTAMP EndDate
+        VARCHAR UnitMeasureCode
+        SMALLINT BOMLevel
+        DECIMAL PerAssemblyQty
+        TIMESTAMP ModifiedDate
+    }
+    BusinessEntity {
+        INTEGER BusinessEntityID PK
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    BusinessEntityAddress {
+        INTEGER BusinessEntityID PK
+        INTEGER AddressID PK
+        INTEGER AddressTypeID PK
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    BusinessEntityContact {
+        INTEGER BusinessEntityID PK
+        INTEGER PersonID PK
+        INTEGER ContactTypeID PK
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    ContactType {
+        INTEGER ContactTypeID PK
+        VARCHAR Name
+        TIMESTAMP ModifiedDate
+    }
+    CountryRegion {
+        VARCHAR CountryRegionCode PK
+        VARCHAR Name
+        TIMESTAMP ModifiedDate
+    }
+    CountryRegionCurrency {
+        VARCHAR CountryRegionCode PK
+        VARCHAR CurrencyCode PK
+        TIMESTAMP ModifiedDate
+    }
+    CreditCard {
+        INTEGER CreditCardID PK
+        VARCHAR CardType
+        VARCHAR CardNumber
+        INTEGER ExpMonth
+        SMALLINT ExpYear
+        TIMESTAMP ModifiedDate
+    }
+    Culture {
+        VARCHAR CultureID PK
+        VARCHAR Name
+        TIMESTAMP ModifiedDate
+    }
+    Currency {
+        VARCHAR CurrencyCode PK
+        VARCHAR Name
+        TIMESTAMP ModifiedDate
+    }
+    CurrencyRate {
+        INTEGER CurrencyRateID PK
+        TIMESTAMP CurrencyRateDate
+        VARCHAR FromCurrencyCode
+        VARCHAR ToCurrencyCode
+        DECIMAL AverageRate
+        DECIMAL EndOfDayRate
+        TIMESTAMP ModifiedDate
+    }
+    Customer {
+        INTEGER CustomerID PK
+        INTEGER PersonID
+        INTEGER StoreID
+        INTEGER TerritoryID
+        VARCHAR AccountNumber
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    Department {
+        SMALLINT DepartmentID PK
+        VARCHAR Name
+        VARCHAR GroupName
+        TIMESTAMP ModifiedDate
+    }
+    EmailAddress {
+        INTEGER BusinessEntityID PK
+        INTEGER EmailAddressID PK
+        VARCHAR EmailAddress
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    Employee {
+        INTEGER BusinessEntityID PK
+        VARCHAR NationalIDNumber
+        VARCHAR LoginID
+        VARCHAR OrganizationNode
+        INTEGER OrganizationLevel
+        VARCHAR JobTitle
+        DATE BirthDate
+        VARCHAR MaritalStatus
+        VARCHAR Gender
+        DATE HireDate
+        BIT SalariedFlag
+        SMALLINT VacationHours
+        SMALLINT SickLeaveHours
+        BIT CurrentFlag
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    EmployeeDepartmentHistory {
+        INTEGER BusinessEntityID PK
+        SMALLINT DepartmentID PK
+        INTEGER ShiftID PK
+        DATE StartDate PK
+        DATE EndDate
+        TIMESTAMP ModifiedDate
+    }
+    EmployeePayHistory {
+        INTEGER BusinessEntityID PK
+        TIMESTAMP RateChangeDate PK
+        DECIMAL Rate
+        INTEGER PayFrequency
+        TIMESTAMP ModifiedDate
+    }
+    Location {
+        SMALLINT LocationID PK
+        VARCHAR Name
+        DECIMAL CostRate
+        DECIMAL Availability
+        TIMESTAMP ModifiedDate
+    }
+    Password {
+        INTEGER BusinessEntityID PK
+        VARCHAR PasswordHash
+        VARCHAR PasswordSalt
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    Person {
+        INTEGER BusinessEntityID PK
+        VARCHAR PersonType
+        BIT NameStyle
+        VARCHAR Title
+        VARCHAR FirstName
+        VARCHAR MiddleName
+        VARCHAR LastName
+        VARCHAR Suffix
+        INTEGER EmailPromotion
+        VARCHAR AdditionalContactInfo
+        VARCHAR Demographics
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    PersonCreditCard {
+        INTEGER BusinessEntityID PK
+        INTEGER CreditCardID PK
+        TIMESTAMP ModifiedDate
+    }
+    PersonPhone {
+        INTEGER BusinessEntityID PK
+        VARCHAR PhoneNumber PK
+        INTEGER PhoneNumberTypeID PK
+        TIMESTAMP ModifiedDate
+    }
+    PhoneNumberType {
+        INTEGER PhoneNumberTypeID PK
+        VARCHAR Name
+        TIMESTAMP ModifiedDate
+    }
+    Product {
+        INTEGER ProductID PK
+        VARCHAR Name
+        VARCHAR ProductNumber
+        BIT MakeFlag
+        BIT FinishedGoodsFlag
+        VARCHAR Color
+        SMALLINT SafetyStockLevel
+        SMALLINT ReorderPoint
+        DECIMAL StandardCost
+        DECIMAL ListPrice
+        VARCHAR Size
+        VARCHAR SizeUnitMeasureCode
+        VARCHAR WeightUnitMeasureCode
+        DECIMAL Weight
+        INTEGER DaysToManufacture
+        VARCHAR ProductLine
+        VARCHAR Class
+        VARCHAR Style
+        INTEGER ProductSubcategoryID
+        INTEGER ProductModelID
+        TIMESTAMP SellStartDate
+        TIMESTAMP SellEndDate
+        TIMESTAMP DiscontinuedDate
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    ProductCategory {
+        INTEGER ProductCategoryID PK
+        VARCHAR Name
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    ProductCostHistory {
+        INTEGER ProductID PK
+        TIMESTAMP StartDate PK
+        TIMESTAMP EndDate
+        DECIMAL StandardCost
+        TIMESTAMP ModifiedDate
+    }
+    ProductDescription {
+        INTEGER ProductDescriptionID PK
+        VARCHAR Description
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    ProductInventory {
+        INTEGER ProductID PK
+        SMALLINT LocationID PK
+        VARCHAR Shelf
+        INTEGER Bin
+        SMALLINT Quantity
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    ProductListPriceHistory {
+        INTEGER ProductID PK
+        TIMESTAMP StartDate PK
+        TIMESTAMP EndDate
+        DECIMAL ListPrice
+        TIMESTAMP ModifiedDate
+    }
+    ProductModel {
+        INTEGER ProductModelID PK
+        VARCHAR Name
+        VARCHAR CatalogDescription
+        VARCHAR Instructions
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    ProductModelProductDescriptionCulture {
+        INTEGER ProductModelID PK
+        INTEGER ProductDescriptionID PK
+        VARCHAR CultureID PK
+        TIMESTAMP ModifiedDate
+    }
+    ProductSubcategory {
+        INTEGER ProductSubcategoryID PK
+        INTEGER ProductCategoryID
+        VARCHAR Name
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    ProductVendor {
+        INTEGER ProductID PK
+        INTEGER BusinessEntityID PK
+        INTEGER AverageLeadTime
+        DECIMAL StandardPrice
+        DECIMAL LastReceiptCost
+        TIMESTAMP LastReceiptDate
+        INTEGER MinOrderQty
+        INTEGER MaxOrderQty
+        INTEGER OnOrderQty
+        VARCHAR UnitMeasureCode
+        TIMESTAMP ModifiedDate
+    }
+    PurchaseOrderDetail {
+        INTEGER PurchaseOrderID PK
+        INTEGER PurchaseOrderDetailID PK
+        TIMESTAMP DueDate
+        SMALLINT OrderQty
+        INTEGER ProductID
+        DECIMAL UnitPrice
+        DECIMAL LineTotal
+        DECIMAL ReceivedQty
+        DECIMAL RejectedQty
+        DECIMAL StockedQty
+        TIMESTAMP ModifiedDate
+    }
+    PurchaseOrderHeader {
+        INTEGER PurchaseOrderID PK
+        INTEGER RevisionNumber
+        INTEGER Status
+        INTEGER EmployeeID
+        INTEGER VendorID
+        INTEGER ShipMethodID
+        TIMESTAMP OrderDate
+        TIMESTAMP ShipDate
+        DECIMAL SubTotal
+        DECIMAL TaxAmt
+        DECIMAL Freight
+        DECIMAL TotalDue
+        TIMESTAMP ModifiedDate
+    }
+    SalesOrderDetail {
+        INTEGER SalesOrderID PK
+        INTEGER SalesOrderDetailID PK
+        VARCHAR CarrierTrackingNumber
+        SMALLINT OrderQty
+        INTEGER ProductID
+        INTEGER SpecialOfferID
+        DECIMAL UnitPrice
+        DECIMAL UnitPriceDiscount
+        DECIMAL LineTotal
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    SalesOrderHeader {
+        INTEGER SalesOrderID PK
+        INTEGER RevisionNumber
+        TIMESTAMP OrderDate
+        TIMESTAMP DueDate
+        TIMESTAMP ShipDate
+        INTEGER Status
+        BIT OnlineOrderFlag
+        VARCHAR SalesOrderNumber
+        VARCHAR PurchaseOrderNumber
+        VARCHAR AccountNumber
+        INTEGER CustomerID
+        INTEGER SalesPersonID
+        INTEGER TerritoryID
+        INTEGER BillToAddressID
+        INTEGER ShipToAddressID
+        INTEGER ShipMethodID
+        INTEGER CreditCardID
+        VARCHAR CreditCardApprovalCode
+        INTEGER CurrencyRateID
+        DECIMAL SubTotal
+        DECIMAL TaxAmt
+        DECIMAL Freight
+        DECIMAL TotalDue
+        VARCHAR Comment
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    SalesOrderHeaderSalesReason {
+        INTEGER SalesOrderID PK
+        INTEGER SalesReasonID PK
+        TIMESTAMP ModifiedDate
+    }
+    SalesPerson {
+        INTEGER BusinessEntityID PK
+        INTEGER TerritoryID
+        DECIMAL SalesQuota
+        DECIMAL Bonus
+        DECIMAL CommissionPct
+        DECIMAL SalesYTD
+        DECIMAL SalesLastYear
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    SalesPersonQuotaHistory {
+        INTEGER BusinessEntityID PK
+        TIMESTAMP QuotaDate PK
+        DECIMAL SalesQuota
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    SalesReason {
+        INTEGER SalesReasonID PK
+        VARCHAR Name
+        VARCHAR ReasonType
+        TIMESTAMP ModifiedDate
+    }
+    SalesTaxRate {
+        INTEGER SalesTaxRateID PK
+        INTEGER StateProvinceID
+        INTEGER TaxType
+        DECIMAL TaxRate
+        VARCHAR Name
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    SalesTerritory {
+        INTEGER TerritoryID PK
+        VARCHAR Name
+        VARCHAR CountryRegionCode
+        VARCHAR Grp
+        DECIMAL SalesYTD
+        DECIMAL SalesLastYear
+        DECIMAL CostYTD
+        DECIMAL CostLastYear
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    SalesTerritoryHistory {
+        INTEGER BusinessEntityID PK
+        INTEGER TerritoryID PK
+        TIMESTAMP StartDate PK
+        TIMESTAMP EndDate
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    ScrapReason {
+        SMALLINT ScrapReasonID PK
+        VARCHAR Name
+        TIMESTAMP ModifiedDate
+    }
+    Shift {
+        INTEGER ShiftID PK
+        VARCHAR Name
+        TIME StartTime
+        TIME EndTime
+        TIMESTAMP ModifiedDate
+    }
+    ShipMethod {
+        INTEGER ShipMethodID PK
+        VARCHAR Name
+        DECIMAL ShipBase
+        DECIMAL ShipRate
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    ShoppingCartItem {
+        INTEGER ShoppingCartItemID PK
+        VARCHAR ShoppingCartID
+        INTEGER Quantity
+        INTEGER ProductID
+        TIMESTAMP DateCreated
+        TIMESTAMP ModifiedDate
+    }
+    SpecialOffer {
+        INTEGER SpecialOfferID PK
+        VARCHAR Description
+        DECIMAL DiscountPct
+        VARCHAR Type
+        VARCHAR Category
+        TIMESTAMP StartDate
+        TIMESTAMP EndDate
+        INTEGER MinQty
+        INTEGER MaxQty
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    SpecialOfferProduct {
+        INTEGER SpecialOfferID PK
+        INTEGER ProductID PK
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    StateProvince {
+        INTEGER StateProvinceID PK
+        VARCHAR StateProvinceCode
+        VARCHAR CountryRegionCode
+        BIT IsOnlyStateProvinceFlag
+        VARCHAR Name
+        INTEGER TerritoryID
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    Store {
+        INTEGER BusinessEntityID PK
+        VARCHAR Name
+        INTEGER SalesPersonID
+        VARCHAR Demographics
+        VARCHAR rowguid
+        TIMESTAMP ModifiedDate
+    }
+    TransactionHistory {
+        INTEGER TransactionID PK
+        INTEGER ProductID
+        INTEGER ReferenceOrderID
+        INTEGER ReferenceOrderLineID
+        TIMESTAMP TransactionDate
+        VARCHAR TransactionType
+        INTEGER Quantity
+        DECIMAL ActualCost
+        TIMESTAMP ModifiedDate
+    }
+    TransactionHistoryArchive {
+        INTEGER TransactionID PK
+        INTEGER ProductID
+        INTEGER ReferenceOrderID
+        INTEGER ReferenceOrderLineID
+        TIMESTAMP TransactionDate
+        VARCHAR TransactionType
+        INTEGER Quantity
+        DECIMAL ActualCost
+        TIMESTAMP ModifiedDate
+    }
+    UnitMeasure {
+        VARCHAR UnitMeasureCode PK
+        VARCHAR Name
+        TIMESTAMP ModifiedDate
+    }
+    Vendor {
+        INTEGER BusinessEntityID PK
+        VARCHAR AccountNumber
+        VARCHAR Name
+        INTEGER CreditRating
+        BIT PreferredVendorStatus
+        BIT ActiveFlag
+        VARCHAR PurchasingWebServiceURL
+        TIMESTAMP ModifiedDate
+    }
+    WorkOrder {
+        INTEGER WorkOrderID PK
+        INTEGER ProductID
+        INTEGER OrderQty
+        INTEGER StockedQty
+        SMALLINT ScrappedQty
+        TIMESTAMP StartDate
+        TIMESTAMP EndDate
+        TIMESTAMP DueDate
+        SMALLINT ScrapReasonID
+        TIMESTAMP ModifiedDate
+    }
+    WorkOrderRouting {
+        INTEGER WorkOrderID PK
+        INTEGER ProductID PK
+        SMALLINT OperationSequence PK
+        SMALLINT LocationID
+        TIMESTAMP ScheduledStartDate
+        TIMESTAMP ScheduledEndDate
+        TIMESTAMP ActualStartDate
+        TIMESTAMP ActualEndDate
+        DECIMAL ActualResourceHrs
+        DECIMAL PlannedCost
+        DECIMAL ActualCost
+        TIMESTAMP ModifiedDate
+    }
+    BillOfMaterials }o--|| Product : "ProductAssemblyID -> ProductID"
+    BillOfMaterials }o--|| Product : "ComponentID -> ProductID"
+    BillOfMaterials }o--|| UnitMeasure : "UnitMeasureCode -> UnitMeasureCode"
+    BusinessEntityAddress }o--|| Address : "AddressID -> AddressID"
+    BusinessEntityAddress }o--|| AddressType : "AddressTypeID -> AddressTypeID"
+    BusinessEntityAddress }o--|| BusinessEntity : "BusinessEntityID -> BusinessEntityID"
+    BusinessEntityContact }o--|| Person : "PersonID -> BusinessEntityID"
+    BusinessEntityContact }o--|| ContactType : "ContactTypeID -> ContactTypeID"
+    BusinessEntityContact }o--|| BusinessEntity : "BusinessEntityID -> BusinessEntityID"
+    CountryRegionCurrency }o--|| CountryRegion : "CountryRegionCode -> CountryRegionCode"
+    CountryRegionCurrency }o--|| Currency : "CurrencyCode -> CurrencyCode"
+    CurrencyRate }o--|| Currency : "FromCurrencyCode -> CurrencyCode"
+    CurrencyRate }o--|| Currency : "ToCurrencyCode -> CurrencyCode"
+    Customer }o--|| Person : "PersonID -> BusinessEntityID"
+    Customer }o--|| Store : "StoreID -> BusinessEntityID"
+    Customer }o--|| SalesTerritory : "TerritoryID -> TerritoryID"
+    EmailAddress }o--|| Person : "BusinessEntityID -> BusinessEntityID"
+    Employee }o--|| Person : "BusinessEntityID -> BusinessEntityID"
+    EmployeeDepartmentHistory }o--|| Department : "DepartmentID -> DepartmentID"
+    EmployeeDepartmentHistory }o--|| Employee : "BusinessEntityID -> BusinessEntityID"
+    EmployeeDepartmentHistory }o--|| Shift : "ShiftID -> ShiftID"
+    EmployeePayHistory }o--|| Employee : "BusinessEntityID -> BusinessEntityID"
+    Password }o--|| Person : "BusinessEntityID -> BusinessEntityID"
+    Person }o--|| BusinessEntity : "BusinessEntityID -> BusinessEntityID"
+    PersonCreditCard }o--|| Person : "BusinessEntityID -> BusinessEntityID"
+    PersonCreditCard }o--|| CreditCard : "CreditCardID -> CreditCardID"
+    PersonPhone }o--|| Person : "BusinessEntityID -> BusinessEntityID"
+    PersonPhone }o--|| PhoneNumberType : "PhoneNumberTypeID -> PhoneNumberTypeID"
+    Product }o--|| UnitMeasure : "SizeUnitMeasureCode -> UnitMeasureCode"
+    Product }o--|| UnitMeasure : "WeightUnitMeasureCode -> UnitMeasureCode"
+    Product }o--|| ProductModel : "ProductModelID -> ProductModelID"
+    Product }o--|| ProductSubcategory : "ProductSubcategoryID -> ProductSubcategoryID"
+    ProductCostHistory }o--|| Product : "ProductID -> ProductID"
+    ProductInventory }o--|| Location : "LocationID -> LocationID"
+    ProductInventory }o--|| Product : "ProductID -> ProductID"
+    ProductListPriceHistory }o--|| Product : "ProductID -> ProductID"
+    ProductModelProductDescriptionCulture }o--|| ProductDescription : "ProductDescriptionID -> ProductDescriptionID"
+    ProductModelProductDescriptionCulture }o--|| Culture : "CultureID -> CultureID"
+    ProductModelProductDescriptionCulture }o--|| ProductModel : "ProductModelID -> ProductModelID"
+    ProductSubcategory }o--|| ProductCategory : "ProductCategoryID -> ProductCategoryID"
+    ProductVendor }o--|| Product : "ProductID -> ProductID"
+    ProductVendor }o--|| UnitMeasure : "UnitMeasureCode -> UnitMeasureCode"
+    ProductVendor }o--|| Vendor : "BusinessEntityID -> BusinessEntityID"
+    PurchaseOrderDetail }o--|| Product : "ProductID -> ProductID"
+    PurchaseOrderDetail }o--|| PurchaseOrderHeader : "PurchaseOrderID -> PurchaseOrderID"
+    SalesOrderDetail }o--|| SalesOrderHeader : "SalesOrderID -> SalesOrderID"
+    SalesOrderDetail }o--|| SpecialOfferProduct : "SpecialOfferID, ProductID -> SpecialOfferID, ProductID"
+    SalesOrderHeader }o--|| Address : "BillToAddressID -> AddressID"
+    SalesOrderHeader }o--|| Address : "ShipToAddressID -> AddressID"
+    SalesOrderHeader }o--|| CreditCard : "CreditCardID -> CreditCardID"
+    SalesOrderHeader }o--|| CurrencyRate : "CurrencyRateID -> CurrencyRateID"
+    SalesOrderHeader }o--|| Customer : "CustomerID -> CustomerID"
+    SalesOrderHeader }o--|| SalesPerson : "SalesPersonID -> BusinessEntityID"
+    SalesOrderHeader }o--|| ShipMethod : "ShipMethodID -> ShipMethodID"
+    SalesOrderHeader }o--|| SalesTerritory : "TerritoryID -> TerritoryID"
+    SalesOrderHeaderSalesReason }o--|| SalesOrderHeader : "SalesOrderID -> SalesOrderID"
+    SalesOrderHeaderSalesReason }o--|| SalesReason : "SalesReasonID -> SalesReasonID"
+    SalesPerson }o--|| Employee : "BusinessEntityID -> BusinessEntityID"
+    SalesPerson }o--|| SalesTerritory : "TerritoryID -> TerritoryID"
+    SalesPersonQuotaHistory }o--|| SalesPerson : "BusinessEntityID -> BusinessEntityID"
+    SalesTaxRate }o--|| StateProvince : "StateProvinceID -> StateProvinceID"
+    SalesTerritory }o--|| CountryRegion : "CountryRegionCode -> CountryRegionCode"
+    SalesTerritoryHistory }o--|| SalesPerson : "BusinessEntityID -> BusinessEntityID"
+    SalesTerritoryHistory }o--|| SalesTerritory : "TerritoryID -> TerritoryID"
+    ShoppingCartItem }o--|| Product : "ProductID -> ProductID"
+    SpecialOfferProduct }o--|| Product : "ProductID -> ProductID"
+    SpecialOfferProduct }o--|| SpecialOffer : "SpecialOfferID -> SpecialOfferID"
+    StateProvince }o--|| CountryRegion : "CountryRegionCode -> CountryRegionCode"
+    StateProvince }o--|| SalesTerritory : "TerritoryID -> TerritoryID"
+    Store }o--|| BusinessEntity : "BusinessEntityID -> BusinessEntityID"
+    Store }o--|| SalesPerson : "SalesPersonID -> BusinessEntityID"
+    TransactionHistory }o--|| Product : "ProductID -> ProductID"
+    TransactionHistoryArchive }o--|| Product : "ProductID -> ProductID"
+    Vendor }o--|| BusinessEntity : "BusinessEntityID -> BusinessEntityID"
+    WorkOrder }o--|| Product : "ProductID -> ProductID"
+    WorkOrder }o--|| ScrapReason : "ScrapReasonID -> ScrapReasonID"
+    WorkOrderRouting }o--|| Location : "LocationID -> LocationID"
+    WorkOrderRouting }o--|| WorkOrder : "WorkOrderID -> WorkOrderID"
