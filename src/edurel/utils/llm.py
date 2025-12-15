@@ -2,7 +2,6 @@
 # Import / Config
 # ---------------------------------------------------------------------------------------------
 import os
-import httpx
 
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
@@ -10,9 +9,48 @@ from langchain_ollama import ChatOllama
   
 from langchain_core.prompts.chat import ChatPromptTemplate
 
+# ---------------------------------------------------------------------------------------------
+# Chat Clients
+# ---------------------------------------------------------------------------------------------
+def anthropic_c(model, timeout=60, max_retries=0, temperature=0):
+    return ChatAnthropic(
+        model=model,
+        timeout=timeout,
+        max_retries=max_retries,
+        temperature=temperature,
+    )
+
+def stats_c(model, timeout=60, max_retries=0, temperature=0):
+    return ChatOpenAI(
+        model=model,
+        api_key=os.getenv("LLM_STATS_API_KEY"),
+        base_url="https://api.zeroeval.com/v1",
+        timeout=timeout,
+        max_retries=max_retries,
+        temperature=temperature,
+    )
+
+def ollama_c(model, timeout=60, max_retries=0, temperature=0):
+    return ChatOllama(
+        model=model,
+        # validate_model_on_init=True,
+        timeout=timeout,
+        max_retries=max_retries,
+        temperature=temperature,
+        base_url=os.getenv("OLLAMA_API_URL"),
+        client_kwargs={"verify": False},
+    )
+
+def openai_c(model, timeout=60, max_retries=0, temperature=0):
+    return ChatOpenAI(
+        model=model,
+        timeout=timeout,
+        max_retries=max_retries,
+        temperature=temperature,
+    )
 
 # ---------------------------------------------------------------------------------------------
-# LLMs
+# LLM Names
 # ---------------------------------------------------------------------------------------------
 ARCTICTEXT2SQL = "a-kore/Arctic-Text2SQL-R1-7B"
 DEEPSEEK32 = "deepseek-chat"
@@ -30,45 +68,7 @@ OPUS41 = "claude-opus-4-1-20250805"
 SONNET4 ="claude-sonnet-4-20250514"
 SONNET45 ="claude-sonnet-4-5-20250929"
 
-# ---------------------------------------------------------------------------------------------
-# Chat models
-# ---------------------------------------------------------------------------------------------
-def chat_anthropic(model, timeout=60, max_retries=0, temperature=0):
-    return ChatAnthropic(
-        model=model,
-        timeout=timeout,
-        max_retries=max_retries,
-        temperature=temperature,
-    )
 
-def chat_llm_stats(model, timeout=60, max_retries=0, temperature=0):
-    return ChatOpenAI(
-        model=model,
-        api_key=os.getenv("LLM_STATS_API_KEY"),
-        base_url="https://api.zeroeval.com/v1",
-        timeout=timeout,
-        max_retries=max_retries,
-        temperature=temperature,
-    )
-
-def chat_ollama(model, timeout=60, max_retries=0, temperature=0):
-    return ChatOllama(
-        model=model,
-        # validate_model_on_init=True,
-        timeout=timeout,
-        max_retries=max_retries,
-        temperature=temperature,
-        base_url=os.getenv("OLLAMA_API_URL"),
-        client_kwargs={"verify": False},
-    )
-
-def chat_openai(model, timeout=60, max_retries=0, temperature=0):
-    return ChatOpenAI(
-        model=model,
-        timeout=timeout,
-        max_retries=max_retries,
-        temperature=temperature,
-    )
 
 # ---------------------------------------------------------------------------------------------
 # Text to SQL

@@ -120,8 +120,6 @@ def file_con(db_path: str, read_only: bool = True) -> duckdb.DuckDBPyConnection:
         >>> con.execute("SELECT * FROM users").fetchall()
     """
     db_file_path = Path(db_path) / "db.duckdb"
-    if not db_file_path.exists():
-        raise ValueError("No db.duckdb")
     con = duckdb.connect(database=str(db_file_path), read_only=read_only)
     return con
 
