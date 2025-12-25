@@ -1,0 +1,545 @@
+{"instance_id": "sf_bq014", "db": "THELOOK_ECOMMERCE", "question": "Can you help me figure out the revenue for the product category that has the highest number of customers making a purchase in their first non-cancelled and non-returned order?", "temporal": "Yes", "external_knowledge": null}
+
+    
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq188", "db": "THELOOK_ECOMMERCE", "question": "Among all product categories in the dataset, identify the category with the highest total purchase quantity (based on order_items table), and for that specific category, what is the average time in minutes that users spend on each product page visit? The average time should be calculated as the difference between the timestamp when a user views a product page and the timestamp of the next event within the same session", "temporal": "Yes", "external_knowledge": null}
+
+    
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq258", "db": "THELOOK_ECOMMERCE", "question": "Generate a monthly report for each product category , where each row corresponds to orders that have a status of 'Complete' and were delivered before the year 2022, grouping by the month and year of delivery. For each category, calculate the total revenue (the sum of sale_price), the total number of completed orders, and compute the month-over-month percentage growth for both revenue and orders by comparing each month\u2019s totals to the previous month\u2019s. Then, for the same orders, aggregate and show the total cost (from product costs), total profit (revenue minus total cost), and finally the profit-to-cost ratio for each month.", "temporal": "Yes", "external_knowledge": null}
+
+    
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq259", "db": "THELOOK_ECOMMERCE", "question": "Using data up to the end of 2022 and organized by the month of each user's first purchase, can you provide the percentage of users who made a purchase in each of the first, second, third, and fourth months since their initial purchase, where the \"first month\" refers to the month of their initial purchase?", "temporal": "Yes", "external_knowledge": null}
+
+    
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq189", "db": "THELOOK_ECOMMERCE", "question": "Based solely on completed orders, calculate the average monthly percentage growth rate in the number of unique orders (counting distinct order IDs) for each product category by comparing each month's count to the previous month within the same category. Identify the product category with the highest average of these monthly order growth rates. Then, for that specific product category, compute the average monthly revenue growth rate by calculating the percentage change in total revenue (sum of sale prices) from month to month and averaging these values over the entire period.", "temporal": "Yes", "external_knowledge": null}
+
+    
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq260", "db": "THELOOK_ECOMMERCE", "question": "From January 1, 2019, to April 30, 2022, how many users are at the youngest age and how many users are at the oldest age for each gender in the e-commerce platform, counting both youngest and oldest users separately for each gender?", "temporal": "Yes", "external_knowledge": null}
+
+WITH filtered_users AS (
+    SELECT 
+        "first_name", 
+        "last_name", 
+        "gender", 
+        "age",
+        CAST(TO_TIMESTAMP("created_at" / 1000000.0) AS DATE) AS "created_at"
+    FROM 
+        "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."USERS"
+    WHERE 
+        CAST(TO_TIMESTAMP("created_at" / 1000000.0) AS DATE) BETWEEN '2019-01-01' AND '2022-04-30'
+),
+youngest_ages AS (
+    SELECT 
+        "gender", 
+        MIN("age") AS "age"
+    FROM 
+        filtered_users
+    GROUP BY 
+        "gender"
+),
+oldest_ages AS (
+    SELECT 
+        "gender", 
+        MAX("age") AS "age"
+    FROM 
+        filtered_users
+    GROUP BY 
+        "gender"
+),
+youngest_oldest AS (
+    SELECT 
+        u."first_name", 
+        u."last_name", 
+        u."gender", 
+        u."age", 
+        'youngest' AS "tag"
+    FROM 
+        filtered_users u
+    JOIN 
+        youngest_ages y
+    ON 
+        u."gender" = y."gender" AND u."age" = y."age"
+    
+    UNION ALL
+    
+    SELECT 
+        u."first_name", 
+        u."last_name", 
+        u."gender", 
+        u."age", 
+        'oldest' AS "tag"
+    FROM 
+        filtered_users u
+    JOIN 
+        oldest_ages o
+    ON 
+        u."gender" = o."gender" AND u."age" = o."age"
+)
+SELECT 
+    "tag", 
+    "gender", 
+    COUNT(*) AS "num"
+FROM 
+    youngest_oldest
+GROUP BY 
+    "tag", "gender"
+ORDER BY 
+    "tag", "gender";
+    
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq261", "db": "THELOOK_ECOMMERCE", "question": "For each month prior to January 2024, identify the product that achieved the highest total profit (calculated as the sum of sale_price minus the product\u2019s cost) across all order items, then report the total cost and total profit for that top product per month, including all order items regardless of their status, and present the results chronologically by month.", "temporal": "Yes", "external_knowledge": null}
+
+    
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq262", "db": "THELOOK_ECOMMERCE", "question": "Generate a monthly analysis report for e-commerce sales from June 2019 to December 2019 that includes, for each product category and each month, the total number of orders, total revenue, and total profit, along with their month-over-month growth rates using the data from June 2019 as the basis for calculating growth starting from July 2019. Ensure that all orders are included regardless of their status, and present the results sorted in ascending order by month (formatted as \"2019-07\") and then by product category. Omitting June 2019 from the final output but using it for the growth calculations.", "temporal": "Yes", "external_knowledge": null}
+
+    
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq190", "db": "THELOOK_ECOMMERCE", "question": "Determine the number of users who are the youngest and oldest for each gender (male and female) separately, among those who signed up between January 1, 2019, and April 30, 2022. For each gender, identify the minimum and maximum ages within this date range, and count how many users fall into these respective age groups.", "temporal": "Yes", "external_knowledge": null}
+
+    
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq263", "db": "THELOOK_ECOMMERCE", "question": "Please create a month-by-month report for the year 2023 that focuses on the 'Sleep & Lounge' category, showing for each month the total sales, total cost, number of complete orders, total profit, and the profit-to-cost ratio, ensuring that the order is marked as 'Complete,' the creation date is between January 1, 2023, and December 31, 2023, and the cost data is accurately associated with the corresponding product through the order items. ", "temporal": "Yes", "external_knowledge": null}
+
+ WITH d AS (
+    SELECT
+        a."order_id", 
+        TO_CHAR(TO_TIMESTAMP(a."created_at" / 1000000.0), 'YYYY-MM') AS "month",  -- 格式化为年月
+        TO_CHAR(TO_TIMESTAMP(a."created_at" / 1000000.0), 'YYYY') AS "year",  -- 格式化为年份
+        b."product_id", b."sale_price", c."category", c."cost"
+    FROM 
+        "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."ORDERS" AS a
+    JOIN 
+        "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."ORDER_ITEMS" AS b
+        ON a."order_id" = b."order_id"
+    JOIN 
+        "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."PRODUCTS" AS c
+        ON b."product_id" = c."id"
+    WHERE 
+        a."status" = 'Complete'
+        AND TO_TIMESTAMP(a."created_at" / 1000000.0) BETWEEN TO_TIMESTAMP('2023-01-01') AND TO_TIMESTAMP('2023-12-31')
+        AND c."category" = 'Sleep & Lounge'
+),
+
+e AS (
+    SELECT 
+        "month", 
+        "year", 
+        "sale_price", 
+        "category", 
+        "cost",
+        SUM("sale_price") OVER (PARTITION BY "month", "category") AS "TPV",
+        SUM("cost") OVER (PARTITION BY "month", "category") AS "total_cost",
+        COUNT(DISTINCT "order_id") OVER (PARTITION BY "month", "category") AS "TPO",
+        SUM("sale_price" - "cost") OVER (PARTITION BY "month", "category") AS "total_profit",
+        SUM(("sale_price" - "cost") / "cost") OVER (PARTITION BY "month", "category") AS "Profit_to_cost_ratio"
+    FROM 
+        d
+)
+
+SELECT DISTINCT 
+    "month", 
+    "category", 
+    "TPV", 
+    "total_cost", 
+    "TPO", 
+    "total_profit", 
+    "Profit_to_cost_ratio"
+FROM 
+    e
+ORDER BY 
+    "month";
+   
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq264", "db": "THELOOK_ECOMMERCE", "question": "Identify the difference in the number of the oldest and youngest users registered between January 1, 2019, and April 30, 2022, from our e-commerce platform data.", "temporal": "Yes", "external_knowledge": null}
+
+    
+WITH youngest AS (
+    SELECT
+        "gender", 
+        "id", 
+        "first_name", 
+        "last_name", 
+        "age", 
+        'youngest' AS "tag"
+    FROM 
+        "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."USERS"
+    WHERE 
+        "age" = (SELECT MIN("age") FROM "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."USERS")
+        AND TO_TIMESTAMP("created_at" / 1000000.0) BETWEEN TO_TIMESTAMP('2019-01-01') AND TO_TIMESTAMP('2022-04-30')
+    GROUP BY 
+        "gender", "id", "first_name", "last_name", "age"
+    ORDER BY 
+        "gender"
+),
+
+oldest AS (
+    SELECT
+        "gender", 
+        "id", 
+        "first_name", 
+        "last_name", 
+        "age", 
+        'oldest' AS "tag"
+    FROM 
+        "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."USERS"
+    WHERE 
+        "age" = (SELECT MAX("age") FROM "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."USERS")
+        AND TO_TIMESTAMP("created_at" / 1000000.0) BETWEEN TO_TIMESTAMP('2019-01-01') AND TO_TIMESTAMP('2022-04-30')
+    GROUP BY 
+        "gender", "id", "first_name", "last_name", "age"
+    ORDER BY 
+        "gender"
+),
+
+TEMP_record AS (
+    SELECT * FROM youngest
+    UNION ALL
+    SELECT * FROM oldest
+)
+
+SELECT 
+    SUM(CASE WHEN "age" = (SELECT MAX("age") FROM "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."USERS") THEN 1 END) - 
+    SUM(CASE WHEN "age" = (SELECT MIN("age") FROM "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."USERS") THEN 1 END) AS "diff"
+FROM 
+    TEMP_record;
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq197", "db": "THELOOK_ECOMMERCE", "question": "For each month prior to July 2024, identify the single best-selling product (determined by highest sales volume, with total revenue as a tiebreaker) among all orders with a 'Complete' status and products with non-null brands. Return a report showing the month, product name, brand, category, total sales, rounded total revenue, and order status for these monthly top performers.", "temporal": "Yes", "external_knowledge": null}
+
+    
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq265", "db": "THELOOK_ECOMMERCE", "question": "Can you list the email addresses of the top 10 users who registered in 2019 and made purchases in 2019, ranking them by their highest average order value, where average order value is calculated by multiplying the number of items in each order by the sale price, summing this total across all orders for each user, and then dividing by the total number of orders?", "temporal": "Yes", "external_knowledge": null}
+
+WITH
+  main AS (
+    SELECT
+      "id" AS "user_id",
+      "email",
+      "gender",
+      "country",
+      "traffic_source"
+    FROM
+      "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."USERS"
+    WHERE
+      TO_TIMESTAMP("created_at" / 1000000.0) BETWEEN TO_TIMESTAMP('2019-01-01') AND TO_TIMESTAMP('2019-12-31')
+  ),
+
+  daate AS (
+    SELECT
+      "user_id",
+      "order_id",
+      CAST(TO_TIMESTAMP("created_at" / 1000000.0) AS DATE) AS "order_date",
+      "num_of_item"
+    FROM
+      "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."ORDERS"
+    WHERE
+      TO_TIMESTAMP("created_at" / 1000000.0) BETWEEN TO_TIMESTAMP('2019-01-01') AND TO_TIMESTAMP('2019-12-31')
+  ),
+
+  orders AS (
+    SELECT
+      "user_id",
+      "order_id",
+      "product_id",
+      "sale_price",
+      "status"
+    FROM
+      "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."ORDER_ITEMS"
+    WHERE
+      TO_TIMESTAMP("created_at" / 1000000.0) BETWEEN TO_TIMESTAMP('2019-01-01') AND TO_TIMESTAMP('2019-12-31')
+  ),
+
+  nest AS (
+    SELECT
+      o."user_id",
+      o."order_id",
+      o."product_id",
+      d."order_date",
+      d."num_of_item",
+      ROUND(o."sale_price", 2) AS "sale_price",
+      ROUND(d."num_of_item" * o."sale_price", 2) AS "total_sale"
+    FROM
+      orders o
+    INNER JOIN
+      daate d
+    ON
+      o."order_id" = d."order_id"
+    ORDER BY
+      o."user_id"
+  ),
+
+  type AS (
+    SELECT
+      "user_id",
+      MIN(nest."order_date") AS "cohort_date",
+      MAX(nest."order_date") AS "latest_shopping_date",
+      DATEDIFF(MONTH, MIN(nest."order_date"), MAX(nest."order_date")) AS "lifespan_months",
+      ROUND(SUM("total_sale"), 2) AS "ltv",
+      COUNT("order_id") AS "no_of_order"
+    FROM
+      nest
+    GROUP BY
+      "user_id"
+  ),
+
+  kite AS (
+    SELECT
+      m."user_id",
+      m."email",
+      m."gender",
+      m."country",
+      m."traffic_source",
+      EXTRACT(YEAR FROM n."cohort_date") AS "cohort_year",
+      n."latest_shopping_date",
+      n."lifespan_months",
+      n."ltv",
+      n."no_of_order",
+      ROUND(n."ltv" / n."no_of_order", 2) AS "avg_order_value"
+    FROM
+      main m
+    INNER JOIN
+      type n
+    ON
+      m."user_id" = n."user_id"
+  )
+
+SELECT
+  "email"
+FROM
+  kite
+ORDER BY
+  "avg_order_value" DESC
+LIMIT 10;
+    
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq266", "db": "THELOOK_ECOMMERCE", "question": "Please provide the names of the products that had sales in each month of 2020 and had the lowest profit, calculated as the difference between their retail price and cost from the products data. Exclude any months where this data isn't available. Please list the products in chronological order based on the month.", "temporal": "Yes", "external_knowledge": null}
+
+    
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq333", "db": "THELOOK_ECOMMERCE", "question": "Which three browsers have the shortest average session duration\u2014calculated by the difference in seconds between the earliest and latest timestamps for each user\u2019s session\u2014while only including browsers that have more than 10 total sessions, and what are their respective average session durations?", "temporal": "Yes", "external_knowledge": null}
+
+    
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq361", "db": "THELOOK_ECOMMERCE", "question": "For the user cohort with a first purchase date in January 2020, what proportion of users returned in the subsequent months of 2020?", "temporal": "Yes", "external_knowledge": null}
+
+    
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq271", "db": "THELOOK_ECOMMERCE", "question": "Please generate a report that, for each month in 2021, provides the number of orders, the number of unique purchasers, and the profit (calculated as the sum of product retail prices minus the sum of product costs), where the orders were placed during 2021 by users who registered in 2021 for inventory items created in 2021, and group the results by the users' country, product department, and product category.", "temporal": "Yes", "external_knowledge": null}
+
+    
+WITH
+orders_x_order_items AS (
+  SELECT orders.*,
+         order_items."inventory_item_id",
+         order_items."sale_price"
+  FROM "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."ORDERS" AS orders
+  LEFT JOIN "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."ORDER_ITEMS" AS order_items
+  ON orders."order_id" = order_items."order_id"
+  WHERE TO_TIMESTAMP_NTZ(orders."created_at" / 1000000) BETWEEN TO_TIMESTAMP_NTZ('2021-01-01') AND TO_TIMESTAMP_NTZ('2021-12-31')
+),
+
+orders_x_inventory AS (
+  SELECT orders_x_order_items.*,
+         inventory_items."product_category",
+         inventory_items."product_department",
+         inventory_items."product_retail_price",
+         inventory_items."product_distribution_center_id",
+         inventory_items."cost",
+         distribution_centers."name"
+  FROM orders_x_order_items
+  LEFT JOIN "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."INVENTORY_ITEMS" AS inventory_items
+  ON orders_x_order_items."inventory_item_id" = inventory_items."id"
+  LEFT JOIN "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."DISTRIBUTION_CENTERS" AS distribution_centers
+  ON inventory_items."product_distribution_center_id" = distribution_centers."id"
+  WHERE TO_TIMESTAMP_NTZ(inventory_items."created_at" / 1000000) BETWEEN TO_TIMESTAMP_NTZ('2021-01-01') AND TO_TIMESTAMP_NTZ('2021-12-31')
+),
+
+orders_x_users AS (
+  SELECT orders_x_inventory.*,
+         users."country" AS "users_country"
+  FROM orders_x_inventory
+  LEFT JOIN "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."USERS" AS users
+  ON orders_x_inventory."user_id" = users."id"
+  WHERE TO_TIMESTAMP_NTZ(users."created_at" / 1000000) BETWEEN TO_TIMESTAMP_NTZ('2021-01-01') AND TO_TIMESTAMP_NTZ('2021-12-31')
+)
+
+SELECT 
+  DATE_TRUNC('MONTH', TO_DATE(TO_TIMESTAMP_NTZ(orders_x_users."created_at" / 1000000))) AS "reporting_month",
+  orders_x_users."users_country",
+  orders_x_users."product_department",
+  orders_x_users."product_category",
+  COUNT(DISTINCT orders_x_users."order_id") AS "n_order",
+  COUNT(DISTINCT orders_x_users."user_id") AS "n_purchasers",
+  SUM(orders_x_users."product_retail_price") - SUM(orders_x_users."cost") AS "profit"
+FROM orders_x_users
+GROUP BY 1, 2, 3, 4
+ORDER BY "reporting_month";
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq272", "db": "THELOOK_ECOMMERCE", "question": "Please provide the names of the top three most profitable products for each month from January 2019 through August 2022, excluding any products associated with orders that were canceled or returned. For each product in each month, the profit should be calculated as the sum of the sale prices of all order items minus the sum of the costs of those sold items in that month.", "temporal": "Yes", "external_knowledge": null}
+
+    
+
+-------------------------------------------------------------------------------------------
+
+
+
+{"instance_id": "sf_bq273", "db": "THELOOK_ECOMMERCE", "question": "Can you list the top 5 months from August 2022 to November 2023 where the profit from Facebook-sourced completed orders showed the largest month-over-month increase? Calculate profit as sales minus costs, group by delivery month, and include only orders created between August 2022 and November 2023. Compare each month's profit to its previous month to find the largest increases.", "temporal": "Yes", "external_knowledge": null}
+
+
+WITH 
+orders AS (
+  SELECT
+    "order_id", 
+    "user_id", 
+    "created_at",
+    DATE_TRUNC('MONTH', TO_TIMESTAMP_NTZ("delivered_at" / 1000000)) AS "delivery_month",  -- Converting to timestamp
+    "status" 
+  FROM "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."ORDERS"
+),
+
+order_items AS (
+  SELECT 
+    "order_id", 
+    "product_id", 
+    "sale_price" 
+  FROM "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."ORDER_ITEMS"
+),
+
+products AS (
+  SELECT 
+    "id", 
+    "cost"
+  FROM "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."PRODUCTS"
+),
+
+users AS (
+  SELECT
+    "id", 
+    "traffic_source" 
+  FROM "THELOOK_ECOMMERCE"."THELOOK_ECOMMERCE"."USERS"
+),
+
+filter_join AS (
+  SELECT 
+    orders."order_id",
+    orders."user_id",
+    order_items."product_id",
+    orders."delivery_month",
+    orders."status",
+    order_items."sale_price",
+    products."cost",
+    users."traffic_source"
+  FROM orders
+  JOIN order_items ON orders."order_id" = order_items."order_id"
+  JOIN products ON order_items."product_id" = products."id"
+  JOIN users ON orders."user_id" = users."id"
+  WHERE orders."status" = 'Complete' 
+    AND users."traffic_source" = 'Facebook'
+    AND TO_TIMESTAMP_NTZ(orders."created_at" / 1000000) BETWEEN TO_TIMESTAMP_NTZ('2022-07-01') AND TO_TIMESTAMP_NTZ('2023-11-30')  -- Include July for calculation
+),
+
+monthly_sales AS (
+  SELECT 
+    "delivery_month",
+    "traffic_source",
+    SUM("sale_price") AS "total_revenue",
+    SUM("sale_price") - SUM("cost") AS "total_profit",
+    COUNT(DISTINCT "product_id") AS "product_quantity",
+    COUNT(DISTINCT "order_id") AS "orders_quantity",
+    COUNT(DISTINCT "user_id") AS "users_quantity"
+  FROM filter_join
+  GROUP BY "delivery_month", "traffic_source"
+)
+
+-- Filter to show only 8th month and onwards, but calculate using July
+SELECT 
+  current_month."delivery_month",
+  COALESCE(
+    current_month."total_profit" - previous_month."total_profit", 
+    0  -- If there is no previous month (i.e. for 8月), return 0
+  ) AS "profit_vs_prior_month"
+FROM monthly_sales AS current_month
+LEFT JOIN monthly_sales AS previous_month
+  ON current_month."traffic_source" = previous_month."traffic_source"
+  AND current_month."delivery_month" = DATEADD(MONTH, -1, previous_month."delivery_month")  -- Correctly join to previous month
+WHERE current_month."delivery_month" >= '2022-08-01'  -- Only show August and later data, but use July for calculation
+ORDER BY "profit_vs_prior_month" DESC
+LIMIT 5;
+    
+
+-------------------------------------------------------------------------------------------
+
+
+

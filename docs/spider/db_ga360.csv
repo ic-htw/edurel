@@ -1,0 +1,17 @@
+GA_SESSIONS_20170525,,"create or replace TABLE GA_SESSIONS_* (
+	""visitorId"" NUMBER(38,0),
+	""visitNumber"" NUMBER(38,0),
+	""visitId"" NUMBER(38,0),
+	""visitStartTime"" NUMBER(38,0),
+	""date"" VARCHAR(16777216),
+	""totals"" VARIANT,
+	""trafficSource"" VARIANT,
+	""device"" VARIANT,
+	""geoNetwork"" VARIANT,
+	""customDimensions"" VARIANT,
+	""hits"" VARIANT,
+	""fullVisitorId"" VARCHAR(16777216),
+	""userId"" VARCHAR(16777216),
+	""channelGrouping"" VARCHAR(16777216),
+	""socialEngagementType"" VARCHAR(16777216)
+);"

@@ -5,6 +5,7 @@
 **/gitignore
 **/cred*.*
 **/ollama/api.http
+**/spider2
 
 
 # Byte-compiled / optimized / DLL files

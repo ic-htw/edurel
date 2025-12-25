@@ -1,0 +1,552 @@
+{"instance_id": "sf_bq026", "db": "PATENTS", "question": "For the assignee who has been the most active in the patent category 'A61', I'd like to know the five patent jurisdictions code where they filed the most patents during their busiest year, separated by commas.", "external_knowledge": null}
+-------------------------------------------------------------------------------------------
+
+{"instance_id": "sf_bq027", "db": "PATENTS", "question": "For patents granted between 2010 and 2018, provide the publication number of each patent and the number of backward citations it has received in the SEA category.", "external_knowledge": null}
+-------------------------------------------------------------------------------------------
+{"instance_id": "sf_bq029", "db": "PATENTS", "question": "Get the average number of inventors per patent and the total count of patent publications in Canada (CA) for each 5-year period from 1960 to 2020, based on publication dates. Only include patents that have at least one inventor listed, and group results by 5-year intervals (1960-1964, 1965-1969, etc.).", "external_knowledge": null}
+
+-------------------------------------------------------------------------------------------
+
+{"instance_id": "sf_bq033", "db": "PATENTS", "question": "How many U.S. publications related to IoT (where the abstract includes the phrase 'internet of things') were filed each month from 2008 to 2022, including months with no filings?", "external_knowledge": null}
+WITH Patent_Matches AS (
+    SELECT
+      TO_DATE(CAST(ANY_VALUE(patentsdb."filing_date") AS STRING), 'YYYYMMDD') AS Patent_Filing_Date,
+      patentsdb."application_number" AS Patent_Application_Number,
+      MAX(abstract_info.value:"text") AS Patent_Title,
+      MAX(abstract_info.value:"language") AS Patent_Title_Language
+    FROM
+      PATENTS.PATENTS.PUBLICATIONS AS patentsdb,
+      LATERAL FLATTEN(input => patentsdb."abstract_localized") AS abstract_info
+    WHERE
+      LOWER(abstract_info.value:"text") LIKE '%internet of things%'
+      AND patentsdb."country_code" = 'US'
+    GROUP BY
+      Patent_Application_Number
+),
+
+Date_Series_Table AS (
+    SELECT
+        DATEADD(day, seq4(), DATE '2008-01-01') AS day,
+        0 AS Number_of_Patents
+    FROM
+        TABLE(
+            GENERATOR(
+                ROWCOUNT => 5479
+            )
+        )
+    ORDER BY
+        day
+)
+
+SELECT
+  TO_CHAR(Date_Series_Table.day, 'YYYY-MM') AS Patent_Date_YearMonth,
+  COUNT(Patent_Matches.Patent_Application_Number) AS Number_of_Patent_Applications
+FROM
+  Date_Series_Table
+  LEFT JOIN Patent_Matches
+    ON Date_Series_Table.day = Patent_Matches.Patent_Filing_Date
+WHERE
+    Date_Series_Table.day < DATE '2023-01-01'
+GROUP BY
+  TO_CHAR(Date_Series_Table.day, 'YYYY-MM')
+ORDER BY
+  Patent_Date_YearMonth;
+
+-------------------------------------------------------------------------------------------
+
+{"instance_id": "sf_bq091", "db": "PATENTS", "question": "In which year did the assignee with the most applications in the patent category 'A61' file the most?", "external_knowledge": null}
+WITH AA AS (
+    SELECT 
+        FIRST_VALUE("assignee_harmonized") OVER (PARTITION BY "application_number" ORDER BY "application_number") AS assignee_harmonized,
+        FIRST_VALUE("filing_date") OVER (PARTITION BY "application_number" ORDER BY "application_number") AS filing_date,
+        "application_number"
+    FROM 
+        PATENTS.PATENTS.PUBLICATIONS AS pubs
+        , LATERAL FLATTEN(input => pubs."cpc") AS c
+    WHERE 
+        c.value:"code" LIKE 'A61%'
+),
+
+PatentApplications AS (
+    SELECT 
+        ANY_VALUE(assignee_harmonized) as assignee_harmonized,
+        ANY_VALUE(filing_date) as filing_date
+    FROM AA
+    GROUP BY "application_number"
+),
+
+AssigneeApplications AS (
+SELECT 
+    COUNT(*) AS total_applications,
+    a.value::STRING AS assignee_name,
+    CAST(FLOOR(filing_date / 10000) AS INT) AS filing_year
+FROM 
+    PatentApplications
+    , LATERAL FLATTEN(input => assignee_harmonized) AS a
+GROUP BY 
+    a.value::STRING, filing_year
+),
+
+TotalApplicationsPerAssignee AS (
+    SELECT
+        assignee_name,
+        SUM(total_applications) AS total_applications
+    FROM 
+        AssigneeApplications
+    GROUP BY 
+        assignee_name
+    ORDER BY 
+        total_applications DESC
+    LIMIT 1
+),
+
+MaxYearForTopAssignee AS (
+    SELECT
+        aa.assignee_name,
+        aa.filing_year,
+        aa.total_applications
+    FROM 
+        AssigneeApplications aa
+    INNER JOIN
+        TotalApplicationsPerAssignee tapa ON aa.assignee_name = tapa.assignee_name
+    ORDER BY 
+        aa.total_applications DESC
+    LIMIT 1
+)
+
+SELECT filing_year
+FROM 
+    MaxYearForTopAssignee
+    
+
+-------------------------------------------------------------------------------------------
+
+{"instance_id": "sf_bq099", "db": "PATENTS", "question": "For patent class A01B3, I want to analyze the information of the top 3 assignees based on the total number of applications. Please provide the following five pieces of information: the name of this assignee,  total number of applications, the year with the most applications, the number of applications in that year, and the country code with the most applications during that year.", "external_knowledge": null}
+WITH PatentApplications AS (
+   SELECT 
+        "assignee_harmonized" AS assignee_harmonized,
+        "filing_date" AS filing_date,
+        "country_code" AS country_code,
+        "application_number" AS application_number
+    FROM 
+        PATENTS.PATENTS.PUBLICATIONS AS pubs,
+        LATERAL FLATTEN(input => pubs."cpc") AS c
+    WHERE c.value:"code" LIKE 'A01B3%'
+
+),
+
+AssigneeApplications AS (
+    SELECT 
+        COUNT(*) AS year_country_cnt,
+        a.value:"name" AS assignee_name,
+        CAST(FLOOR(filing_date / 10000) AS INT) AS filing_year,
+        apps.country_code as country_code
+    FROM 
+        PatentApplications as apps,
+        LATERAL FLATTEN(input => assignee_harmonized) AS a
+    GROUP BY 
+        assignee_name, filing_year, country_code
+),
+
+RankedApplications AS (
+    SELECT
+        assignee_name,
+        filing_year,
+        country_code,
+        year_country_cnt,
+        SUM(year_country_cnt) OVER (PARTITION BY assignee_name, filing_year) AS total_cnt,
+        ROW_NUMBER() OVER (PARTITION BY assignee_name, filing_year ORDER BY year_country_cnt DESC) AS rn
+    FROM
+        AssigneeApplications
+),
+
+AggregatedData AS (
+    SELECT
+        total_cnt AS year_cnt,
+        assignee_name,
+        filing_year,
+        country_code
+    FROM
+        RankedApplications
+    WHERE
+        rn = 1
+)
+
+
+SELECT 
+    total_count,
+    REPLACE(assignee_name, '"', '') AS assignee_name,
+    year_cnt,
+    filing_year,
+    country_code
+FROM (
+    SELECT 
+        year_cnt,
+        assignee_name,
+        filing_year,
+        country_code,
+        SUM(year_cnt) OVER (PARTITION BY assignee_name) AS total_count,
+        ROW_NUMBER() OVER (PARTITION BY assignee_name ORDER BY year_cnt DESC) AS rn
+    FROM
+        AggregatedData
+    ORDER BY assignee_name
+) sub
+WHERE rn = 1
+ORDER BY total_count
+DESC
+LIMIT 3
+
+
+-------------------------------------------------------------------------------------------
+
+{"instance_id": "sf_bq209", "db": "PATENTS", "question": "Can you calculate the number of utility patents that were granted in 2010 and have exactly one forward citation within a 10-year window following their application/filing date? For this analysis, forward citations should be counted as distinct citing application numbers that cited the patent within 10 years after the patent's own filing date.", "external_knowledge": null}
+
+WITH patents_sample AS (
+    SELECT
+        t1."publication_number",
+        t1."application_number"
+    FROM
+        PATENTS.PATENTS.PUBLICATIONS t1
+    WHERE
+        TO_DATE(
+            CASE
+                WHEN t1."grant_date" != 0 THEN TO_CHAR(t1."grant_date")
+                ELSE NULL
+            END, 
+            'YYYYMMDD'
+        ) BETWEEN TO_DATE('20100101', 'YYYYMMDD') AND TO_DATE('20101231', 'YYYYMMDD')
+),
+forward_citation AS (
+    SELECT
+        patents_sample."publication_number",
+        COUNT(DISTINCT t3."citing_application_number") AS "forward_citations"
+    FROM
+        patents_sample
+        LEFT JOIN (
+            SELECT
+                x2."publication_number",
+                TO_DATE(
+                    CASE
+                        WHEN x2."filing_date" != 0 THEN TO_CHAR(x2."filing_date")
+                        ELSE NULL
+                    END,
+                    'YYYYMMDD'
+                ) AS "filing_date"
+            FROM
+                PATENTS.PATENTS.PUBLICATIONS x2
+            WHERE
+                x2."filing_date" != 0
+        ) t2
+            ON t2."publication_number" = patents_sample."publication_number"
+        LEFT JOIN (
+            SELECT
+                x3."publication_number" AS "citing_publication_number",
+                x3."application_number" AS "citing_application_number",
+                TO_DATE(
+                    CASE
+                        WHEN x3."filing_date" != 0 THEN TO_CHAR(x3."filing_date")
+                        ELSE NULL
+                    END,
+                    'YYYYMMDD'
+                ) AS "joined_filing_date",
+                cite.value:"publication_number"::STRING AS "cited_publication_number"
+            FROM
+                PATENTS.PATENTS.PUBLICATIONS x3,
+                LATERAL FLATTEN(INPUT => x3."citation") cite
+            WHERE
+                x3."filing_date" != 0
+        ) t3
+            ON patents_sample."publication_number" = t3."cited_publication_number"
+            AND t3."joined_filing_date" BETWEEN t2."filing_date" AND DATEADD(YEAR, 10, t2."filing_date")
+    GROUP BY
+        patents_sample."publication_number"
+)
+
+SELECT
+    COUNT(*)
+FROM
+    forward_citation
+WHERE
+    "forward_citations" = 1;
+
+-------------------------------------------------------------------------------------------
+
+
+{"instance_id": "sf_bq210", "db": "PATENTS", "question": "How many US B2 patents granted between 2008 and 2018 contain claims that do not include the word 'claim'?", "external_knowledge": null}
+
+WITH patents_sample AS (
+  SELECT 
+    t1."publication_number" AS publication_number,
+    claim.value:"text" AS claims_text
+  FROM 
+    PATENTS.PATENTS.PUBLICATIONS t1,
+    LATERAL FLATTEN(input => t1."claims_localized") AS claim
+  WHERE 
+    t1."country_code" = 'US'
+    AND t1."grant_date" BETWEEN 20080101 AND 20181231
+    AND t1."grant_date" != 0
+    AND t1."publication_number" LIKE '%B2%'
+),
+Publication_data AS (
+  SELECT
+    publication_number,
+    COUNT_IF(claims_text NOT LIKE '%claim%') AS nb_indep_claims
+  FROM
+    patents_sample
+  GROUP BY
+    publication_number
+)
+
+SELECT COUNT(nb_indep_claims)
+FROM Publication_data
+WHERE nb_indep_claims != 0
+-------------------------------------------------------------------------------------------
+
+
+{"instance_id": "sf_bq211", "db": "PATENTS", "question": "Among patents granted between 2010 and 2023 in CN, how many of them belong to families that have a total of over one distinct applications?", "external_knowledge": null}
+
+
+-------------------------------------------------------------------------------------------
+
+
+{"instance_id": "sf_bq212", "db": "PATENTS", "question": "For United States utility patents under the B2 classification granted between June and September of 2022, identify the most frequent 4-digit IPC code for each patent. Then, list the publication numbers and IPC4 codes of patents where this code appears 10 or more times.", "external_knowledge": "patents_info.md"}
+
+
+-------------------------------------------------------------------------------------------
+
+
+{"instance_id": "sf_bq213", "db": "PATENTS", "question": "What is the most common 4-digit IPC code among US B2 utility patents granted from June to August in 2022?", "external_knowledge": "patents_info.md"}
+
+WITH interim_table as(
+SELECT 
+    t1."publication_number", 
+    SUBSTR(ipc_u.value:"code", 0, 4) as ipc4
+FROM 
+    PATENTS.PATENTS.PUBLICATIONS t1,
+    LATERAL FLATTEN(input => t1."ipc") AS ipc_u
+WHERE
+"country_code" = 'US'  
+AND "grant_date" between 20220601 AND 20220831
+  AND "grant_date" != 0
+  AND "publication_number" LIKE '%B2%'  
+GROUP BY 
+    t1."publication_number", 
+    ipc4
+) 
+SELECT 
+ipc4
+FROM 
+interim_table 
+GROUP BY ipc4
+ORDER BY COUNT("publication_number") DESC
+LIMIT 1
+-------------------------------------------------------------------------------------------
+
+
+{"instance_id": "sf_bq215", "db": "PATENTS", "question": "Which US patent (with a B2 kind code and a grant date between 2015 and 2018) has the highest originality score calculated as 1 - (the sum of squared occurrences of distinct 4-digit IPC codes in its backward citations divided by the square of the total occurrences of these 4-digit IPC codes)?", "external_knowledge": "patents_info.md"}
+
+
+-------------------------------------------------------------------------------------------
+
+
+
+
+-------------------------------------------------------------------------------------------
+
+
+{"instance_id": "sf_bq221", "db": "PATENTS", "question": "Identify the CPC technology areas with the highest exponential moving average of patent filings each year (with a smoothing factor of 0.2), considering only the first CPC code for each patent that has a valid filing date and a non-empty application number, and report the full CPC title along with the best year associated with the highest exponential moving average for each CPC group at level 5.", "external_knowledge": "sliding_windows_calculation_cpc.md"}
+
+WITH patent_cpcs AS (
+    SELECT
+        cd."parents",
+        CAST(FLOOR("filing_date" / 10000) AS INT) AS "filing_year"
+    FROM (
+        SELECT
+            MAX("cpc") AS "cpc", MAX("filing_date") AS "filing_date"
+        FROM
+            PATENTS.PATENTS.PUBLICATIONS
+        WHERE 
+            "application_number" != ''
+        GROUP BY
+            "application_number"
+    ) AS publications
+    , LATERAL FLATTEN(INPUT => "cpc") AS cpcs
+    JOIN
+        PATENTS.PATENTS.CPC_DEFINITION cd ON cd."symbol" = cpcs.value:"code"
+    WHERE 
+        cpcs.value:"first" = TRUE
+          AND "filing_date" > 0
+
+),
+yearly_counts AS (
+    SELECT
+        "cpc_group",
+        "filing_year",
+        COUNT(*) AS "cnt"
+    FROM (
+        SELECT
+            cpc_parent.value::STRING AS "cpc_group",
+            "filing_year"
+        FROM patent_cpcs,
+             LATERAL FLATTEN(input => patent_cpcs."parents") AS cpc_parent
+    )
+    GROUP BY "cpc_group", "filing_year"
+),
+ordered_counts AS (
+    SELECT
+        "cpc_group",
+        "filing_year",
+        "cnt",
+        ROW_NUMBER() OVER (PARTITION BY "cpc_group" ORDER BY "filing_year" ASC) AS rn
+    FROM yearly_counts
+),
+recursive_ema AS (
+    -- Anchor member: first year per cpc_group
+    SELECT
+        "cpc_group",
+        "filing_year",
+        "cnt",
+        "cnt" * 0.2 + 0 * 0.8 AS "ema",
+        rn
+    FROM ordered_counts
+    WHERE rn = 1
+
+    UNION ALL
+
+    -- Recursive member: subsequent years
+    SELECT
+        oc."cpc_group",
+        oc."filing_year",
+        oc."cnt",
+        oc."cnt" * 0.2 + re."ema" * 0.8 AS "ema",
+        oc.rn
+    FROM ordered_counts oc
+    JOIN recursive_ema re
+        ON oc."cpc_group" = re."cpc_group"
+       AND oc.rn = re.rn + 1
+),
+max_ema AS (
+    SELECT
+        "cpc_group",
+        "filing_year",
+        "ema"
+    FROM recursive_ema
+),
+ranked_ema AS (
+    SELECT
+        me."cpc_group",
+        me."filing_year",
+        me."ema",
+        ROW_NUMBER() OVER (
+            PARTITION BY me."cpc_group" 
+            ORDER BY me."ema" DESC, me."filing_year" DESC
+        ) AS rn_rank
+    FROM max_ema me
+)
+SELECT 
+    c."titleFull",
+    REPLACE(r."cpc_group", '"', '') AS "cpc_group",
+    r."filing_year" AS "best_filing_year"
+FROM ranked_ema r
+JOIN "PATENTS"."PATENTS"."CPC_DEFINITION" c 
+    ON r."cpc_group" = c."symbol"
+WHERE 
+    c."level" = 5
+    AND r.rn_rank = 1
+ORDER BY 
+    c."titleFull", 
+    "cpc_group" ASC;
+
+-------------------------------------------------------------------------------------------
+
+
+{"instance_id": "sf_bq222", "db": "PATENTS", "question": "Find the CPC technology areas in Germany that had the highest exponential moving average (smoothing factor 0.1) of patent filings per year, specifically for patents granted in December 2016. For each CPC group at level 4, show the full title, CPC group, and the year with the highest exponential moving average of patent filings.", "external_knowledge": "sliding_windows_calculation_cpc.md"}
+
+WITH patent_cpcs AS (
+    SELECT
+        cd."parents",
+        CAST(FLOOR("filing_date" / 10000) AS INT) AS "filing_year"
+    FROM (
+        SELECT MAX("cpc") AS "cpc", MAX("filing_date") AS "filing_date"
+        FROM "PATENTS"."PATENTS"."PUBLICATIONS"
+        WHERE "application_number" != ''
+          AND "country_code" = 'DE'
+          AND "grant_date" >= 20161201
+          AND "grant_date" <= 20161231
+        GROUP BY "application_number"
+    ), LATERAL FLATTEN(INPUT => "cpc") AS cpcs
+    JOIN "PATENTS"."PATENTS"."CPC_DEFINITION" cd ON cd."symbol" = cpcs.value:"code"
+    WHERE cpcs.value:"first" = TRUE
+      AND "filing_date" > 0
+),
+yearly_counts AS (
+    SELECT
+        "cpc_group",
+        "filing_year",
+        COUNT(*) AS "cnt"
+    FROM (
+        SELECT
+            cpc_parent.VALUE AS "cpc_group",  -- Corrected reference to flattened "parents"
+            "filing_year"
+        FROM patent_cpcs,
+             LATERAL FLATTEN(INPUT => "parents") AS cpc_parent  -- Corrected reference to flattened "parents"
+    )
+    GROUP BY "cpc_group", "filing_year"
+),
+moving_avg AS (
+    SELECT
+        "cpc_group",
+        "filing_year",
+        "cnt",
+        AVG("cnt") OVER (PARTITION BY "cpc_group" ORDER BY "filing_year" ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS "moving_avg"
+    FROM yearly_counts
+)
+SELECT 
+    c."titleFull",  -- Ensure correct column name (check case)
+    REPLACE("cpc_group", '"', '') AS "cpc_group",
+    MAX("filing_year") AS "best_filing_year"
+FROM moving_avg
+JOIN "PATENTS"."PATENTS"."CPC_DEFINITION" c ON "cpc_group" = c."symbol"
+WHERE c."level" = 4
+GROUP BY c."titleFull", "cpc_group"
+ORDER BY c."titleFull", "cpc_group" ASC;
+
+-------------------------------------------------------------------------------------------
+
+
+{"instance_id": "sf_bq223", "db": "PATENTS", "question": "Which assignees, excluding DENSO CORP itself, have cited patents assigned to DENSO CORP, and what are the titles of the primary CPC subclasses associated with these citations? Provide the name of each citing assignee (excluding DENSO CORP), the full title of the primary CPC subclass (based on the first CPC code), and the count of citations grouped by the citing assignee and the CPC subclass title. Ensure that only citations of patents with valid filing dates are considered, and focus on the first CPC code for each citing patent. The results should specifically exclude DENSO CORP as a citing assignee.", "external_knowledge": "patents_info.md"}
+SELECT
+    REPLACE(citing_assignee, '"', '') AS citing_assignee,
+    cpcdef."titleFull" AS cpc_title,
+    COUNT(*) AS number
+FROM (
+    SELECT
+        pubs."publication_number" AS citing_publication_number,
+        cite.value:"publication_number" AS cited_publication_number,
+        citing_assignee_s.value:"name" AS citing_assignee,
+        SUBSTR(cpcs.value:"code", 1, 4) AS citing_cpc_subclass
+    FROM 
+        PATENTS.PATENTS.PUBLICATIONS AS pubs
+    , LATERAL FLATTEN(input => pubs."citation") AS cite
+    , LATERAL FLATTEN(input => pubs."assignee_harmonized") AS citing_assignee_s
+    , LATERAL FLATTEN(input => pubs."cpc") AS cpcs
+    WHERE
+        cpcs.value:"first" = TRUE
+) AS pubs
+JOIN (
+    SELECT
+        "publication_number" AS cited_publication_number,
+        cited_assignee_s.value:"name" AS cited_assignee
+    FROM
+        PATENTS.PATENTS.PUBLICATIONS
+    , LATERAL FLATTEN(input => "assignee_harmonized") AS cited_assignee_s
+) AS refs
+    ON pubs.cited_publication_number = refs.cited_publication_number
+JOIN
+    PATENTS.PATENTS.CPC_DEFINITION AS cpcdef
+    ON cpcdef."symbol" = pubs.citing_cpc_subclass
+WHERE
+    refs.cited_assignee = 'DENSO CORP'
+    AND pubs.citing_assignee != 'DENSO CORP'
+GROUP BY
+    citing_assignee, cpcdef."titleFull"
