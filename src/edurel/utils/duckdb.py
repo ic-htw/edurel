@@ -6,29 +6,6 @@ import yaml
 import pandas as pd
 
 # ---------------------------------------------------------------------------------------------
-# SQL Query Constants
-# ---------------------------------------------------------------------------------------------
-_SQL_PRIMARY_KEYS = """
-    SELECT
-      table_name,
-      list_aggregate(constraint_column_names, 'string_agg', ', ') as col_names
-    FROM duckdb_constraints()
-    WHERE constraint_type = 'PRIMARY KEY'
-    GROUP BY table_name, constraint_column_names
-    ORDER BY table_name;
-"""
-
-_SQL_FOREIGN_KEYS = """
-    SELECT
-      table_name as table_name_src,
-      list_aggregate(constraint_column_names, 'string_agg', ', ') as col_names_src,
-      referenced_table as table_name_trg,
-      list_aggregate(referenced_column_names, 'string_agg', ', ') as col_names_trg
-    FROM duckdb_constraints()
-    WHERE constraint_type = 'FOREIGN KEY';
-"""
-
-# ---------------------------------------------------------------------------------------------
 # Query utils
 # ---------------------------------------------------------------------------------------------
 def sql_print(con: duckdb.DuckDBPyConnection, sql: str) -> None:
@@ -58,7 +35,7 @@ def sql_df(con: duckdb.DuckDBPyConnection, sql: str) -> pd.DataFrame:
 # ---------------------------------------------------------------------------------------------
 # Connection utils
 # ---------------------------------------------------------------------------------------------
-def mem_con(db_path: Optional[str] = None, verbose: bool = False) -> duckdb.DuckDBPyConnection:
+def mem_con1(db_path: Optional[str] = None, verbose: bool = False) -> duckdb.DuckDBPyConnection:
     """
     Create an in-memory DuckDB connection, optionally loading schema and data from a directory.
 
@@ -101,25 +78,34 @@ def mem_con(db_path: Optional[str] = None, verbose: bool = False) -> duckdb.Duck
             print("No post.sql. Skipping post-processing.")
     return con
 
-def file_con(db_path: str, read_only: bool = True) -> duckdb.DuckDBPyConnection:
-    """
-    Connect to a persistent DuckDB database file.
+def exe_sql_file(con: duckdb.DuckDBPyConnection, sql_file_path: str) -> None:
+    with open(sql_file_path, "r", encoding="utf-8") as f:
+        sql = f.read()
+    con.execute(sql)
 
-    Args:
-        db_path: Path to directory containing db.duckdb file
-        read_only: If True, opens database in read-only mode
+def con_mem() -> duckdb.DuckDBPyConnection:
+    """
+    Connect to an empty in-memory DuckDB database.
 
     Returns:
         DuckDB connection to the database file
 
-    Raises:
-        ValueError: If db.duckdb file does not exist in db_path
-
-    Example:
-        >>> con = file_con("./data/my_database", read_only=True)
-        >>> con.execute("SELECT * FROM users").fetchall()
     """
-    db_file_path = Path(db_path) / "db.duckdb"
+    con = duckdb.connect(database=':memory:', read_only=False)
+    return con
+
+def con_file(db_file_path: str, read_only: bool = True) -> duckdb.DuckDBPyConnection:
+    """
+    Connect to a persistent DuckDB database file.
+
+    Args:
+        db_file_path: Path to duckdb file
+        read_only: If True, opens database in read-only mode, otherwise create empty db
+
+    Returns:
+        DuckDB connection to the database file
+
+    """
     con = duckdb.connect(database=str(db_file_path), read_only=read_only)
     return con
 
@@ -135,83 +121,64 @@ def tablenames(con: duckdb.DuckDBPyConnection) -> List[str]:
 
     Returns:
         List of table names
-
-    Example:
-        >>> tablenames(con)
-        ['users', 'orders', 'products']
     """
     tables = con.execute("SHOW TABLES").fetchall()
     return [table[0] for table in tables]
 
-def columns(con: duckdb.DuckDBPyConnection) -> Dict[str, List[Dict[str, Any]]]:
+def columns(con: duckdb.DuckDBPyConnection, tablename: str) -> List[Dict[str, Any]]:
     """
-    Get column information for all tables in the database.
+    Get column information for a specific table in the database.
 
     Args:
         con: DuckDB connection
+        tablename: Name of the table to describe
 
     Returns:
-        Dictionary mapping table names to lists of column dictionaries.
-        Each column dict contains: 'col' (name), 'type', and 'nullable' (bool)
-
-    Example:
-        >>> columns(con)
-        {
-            'users': [
-                {'col': 'id', 'type': 'INTEGER', 'nullable': False},
-                {'col': 'name', 'type': 'VARCHAR', 'nullable': True}
-            ]
-        }
+        List of column dicts for the specified table.
+        Each column dict contains: 'columnname', 'type', and 'nullable' (bool)
     """
-    tables = con.execute("SHOW TABLES").fetchall()
-    table_dict = {}
-    for (table_name,) in tables:
-        col_info = con.execute(f"DESCRIBE {table_name}").fetchall()
-        columns_list = []
-        for col_name, col_type, null_flag, _, _, _ in col_info:
-            column_dict = {
-                "col": col_name,
-                "type": col_type,
-                "nullable": null_flag != "NO"
+    col_info = con.execute(f"DESCRIBE {tablename}").fetchall()
+    columns_list = []
+    for col_name, col_type, null_flag, _, _, _ in col_info:
+        column_dict = {
+            "columnname": col_name,
+            "type": col_type,
+            "nullable": null_flag != "NO"
             }
-            columns_list.append(column_dict)
+        columns_list.append(column_dict)
+    return columns_list
 
-        table_dict[table_name] = columns_list
-
-    return table_dict
-
-def primary_keys(con: duckdb.DuckDBPyConnection) -> Dict[str, List[str]]:
+def primary_keys(con: duckdb.DuckDBPyConnection, tablename: str) -> List[str]:
     """
-    Get primary key columns for all tables in the database.
+    Get primary key columns for a specific table in the database.
 
     Args:
         con: DuckDB connection
 
     Returns:
-        Dictionary mapping table names to lists of primary key column names.
-        Supports compound primary keys.
-
-    Example:
-        >>> primary_keys(con)
-        {'users': ['id'], 'order_items': ['order_id', 'item_id']}
+         List of primary columns for the specified table.
     """
-    pks = con.execute(_SQL_PRIMARY_KEYS).fetchall()
-    pk_dict = {}
-    for table_name, col_names in pks:
-        pk_dict[table_name] = [col.strip() for col in col_names.split(",")]
-    return pk_dict
 
-def foreign_keys(con: duckdb.DuckDBPyConnection) -> Dict[str, List[Dict[str, List[List[str]]]]]:
+    sql = f"""
+    SELECT
+      list_aggregate(constraint_column_names, 'string_agg', ', ') as col_names
+    FROM duckdb_constraints()
+    WHERE constraint_type = 'PRIMARY KEY' AND lcase(table_name) = lcase('{tablename}');
+    """    
+
+    pks = con.execute(sql).fetchone()
+    return pks[0].split(", ") if pks and pks[0] is not None else []
+
+def foreign_keys(con: duckdb.DuckDBPyConnection, tablename: str) -> List[Dict[str, List[List[str]]]]:
     """
-    Get foreign key relationships for all tables in the database.
+    Get foreign key relationships for a specific table in the database.
 
     Args:
         con: DuckDB connection
 
     Returns:
-        Dictionary mapping source table names to lists of foreign key relationships.
+        List of fk dicts for the specified table.
         Each relationship is a dict: {target_table: [[source_cols], [target_cols]]}
-        Supports compound foreign keys.
 
     Example:
         >>> foreign_keys(con)
@@ -225,80 +192,86 @@ def foreign_keys(con: duckdb.DuckDBPyConnection) -> Dict[str, List[Dict[str, Lis
             ]
         }
     """
-    fks = con.execute(_SQL_FOREIGN_KEYS).fetchall()
-    fk_dict = {}
-    for table_name_src, col_names_src, table_name_trg, col_names_trg in fks:
+
+    sql = f"""
+    SELECT
+      list_aggregate(constraint_column_names, 'string_agg', ', ') as col_names_src,
+      referenced_table as table_name_trg,
+      list_aggregate(referenced_column_names, 'string_agg', ', ') as col_names_trg
+    FROM duckdb_constraints()
+    WHERE constraint_type = 'FOREIGN KEY' AND lcase(table_name) = lcase('{tablename}');
+    """
+
+    fks = con.execute(sql).fetchall()
+    fk_list = []
+    for col_names_src, table_name_trg, col_names_trg in fks:
         src_cols = [col.strip() for col in col_names_src.split(",")]
         trg_cols = [col.strip() for col in col_names_trg.split(",")]
         trg_dict = {table_name_trg: [src_cols, trg_cols]}
-        if table_name_src not in fk_dict:
-            fk_dict[table_name_src] = [trg_dict]
-        else:
-            fk_dict[table_name_src].append(trg_dict)
+        fk_list.append(trg_dict)
 
-    return fk_dict
+    return fk_list
+
+def to_fk_dict(fk_str: str) -> Dict[str, List[List[str]]]:
+    """
+    Helper function to create foreign key dictionary.
+
+    Args:
+        fk_str: Foreign key string in the format 'targettable|sourcecolumns|targetcolumns'
+
+    Returns:
+        Dict representing the foreign key relationship
+    """
+    parts = fk_str.split("|")
+    if len(parts) != 3:
+        raise ValueError("fk_str must be in the format 'targettable|sourcecolumns|targetcolumns'")
+    targettable = parts[0]
+    sourcecolumns = [col.strip() for col in parts[1].split(",")]
+    targetcolumns = [col.strip() for col in parts[2].split(",")]   
+    return {targettable: [sourcecolumns, targetcolumns]}
 
 # ---------------------------------------------------------------------------------------------
 # YAML utils
 # ---------------------------------------------------------------------------------------------
-def schema_yaml(con):
+def schema_yaml(con: duckdb.DuckDBPyConnection, additional_fks: Dict[str, List[str]]) -> Dict[str, Any]:
     """
     Returns database schema as a dictionary suitable for YAML serialization.
 
     Args:
         con: DuckDB connection
+        aditional_fks: Dict of additional foreign keys to include in the schema
+     """
 
-    Returns:
-        dict: Schema dictionary with structure:
-            {
-                'tables': [
-                    {
-                        'name': str,
-                        'columns': [{'col': str, 'type': str, 'nullable': bool}],
-                        'primary_key': [str],  # optional
-                        'foreign_keys': [      # optional
-                            {
-                                'name': str,
-                                'columns': [str],
-                                'ref_table': str,
-                                'ref_columns': [str]
-                            }
-                        ]
-                    }
-                ]
-            }
-    """
-    # Get all metadata
     tables = tablenames(con)
-    cols = columns(con)
-    pks = primary_keys(con)
-    fks = foreign_keys(con)
 
     schema_dict = {'tables': []}
 
-    for table_name in tables:
+    for tablename in tables:
         table_dict = {
-            'name': table_name,
-            'columns': cols.get(table_name, [])
+            'tablename': tablename,
+            'columns': columns(con, tablename)
         }
 
-        # Add primary key if exists
-        if table_name in pks:
-            table_dict['primary_key'] = pks[table_name]
+        pks = primary_keys(con, tablename)
+        if pks:
+            table_dict['primary_key'] = pks
 
-        # Add foreign keys if exist
-        if table_name in fks:
+        fks = foreign_keys(con, tablename)
+        fks += [to_fk_dict(fk_str) for fk_str in additional_fks.get(tablename, [])]
+        if fks:
             fk_list = []
-            for fk_ref in fks[table_name]:
+            for fk_ref in fks:
+                n = 1
                 # fk_ref is a dict like {'ref_table': [['src_cols'], ['trg_cols']]}
                 for ref_table, (src_cols, trg_cols) in fk_ref.items():
                     fk_dict = {
-                        'name': f"fk_{table_name}_{ref_table}_{'_'.join(src_cols)}",
-                        'columns': src_cols,
-                        'ref_table': ref_table,
-                        'ref_columns': trg_cols
+                        'fkname': f"fk_{tablename}_{ref_table}_{'_'.join(src_cols)}_{n}",
+                        'sourcecolumns': src_cols,
+                        'targettable': ref_table,
+                        'targetcolumns': trg_cols
                     }
                     fk_list.append(fk_dict)
+                n += 1
             table_dict['foreign_keys'] = fk_list
 
         schema_dict['tables'].append(table_dict)
@@ -321,19 +294,6 @@ def tablenames_print(con: duckdb.DuckDBPyConnection) -> None:
     """
     tables = tablenames(con)
     print("\n".join(tables))
-
-def columns_print(con: duckdb.DuckDBPyConnection) -> None:
-    """
-    Print column information for all tables in the database.
-
-    Args:
-        con: DuckDB connection
-    """
-    cols = columns(con)
-    for table_name, col_list in cols.items():
-        print(f"Table: {table_name}")
-        for col in col_list:
-            print(f"  {col}")  
 
 def data_print(con: duckdb.DuckDBPyConnection, spec: Optional[Dict[str, str]] = None) -> None:
     """
@@ -434,14 +394,15 @@ def schema_print(con: duckdb.DuckDBPyConnection) -> None:
     schema_str = schema(con)
     print(schema_str)
 
-def schema_yaml_print(con: duckdb.DuckDBPyConnection) -> None:
+def schema_yaml_print(con: duckdb.DuckDBPyConnection, additional_fks: Dict[str, List[str]]) -> None:
     """
     Print database schema as YAML format.
 
     Args:
         con: DuckDB connection
+        additional_fks: Dict of additional foreign keys to include in the schema
     """
-    schema_dict = schema_yaml(con)
+    schema_dict = schema_yaml(con, additional_fks)
     yaml_string = yaml.dump(schema_dict, default_flow_style=False, sort_keys=False)
     print(yaml_string)
 

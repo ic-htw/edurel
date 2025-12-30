@@ -22,12 +22,12 @@ tables:
     type: DATE
     nullable: False
   - columnname: attribute3
-    type: DECIMAL
+    type: DECIMAL(9,2)
     nullable: False
   primary_key:
   - id2
   foreign_keys:
-  - name: fk_table2_table1
+  - fkname: fk_table2_table1_1
     sourcecolumns:
     - fk1
     targettable: table1
