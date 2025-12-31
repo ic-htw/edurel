@@ -212,12 +212,29 @@ General-purpose widget for rendering Mermaid diagrams from code:
 - Accepts Mermaid diagram code as input
 - Renders interactive diagrams using Mermaid.js
 - Configurable width and height
+- Includes text input pane and visualize button
 
 Usage:
 ```python
 from edurel.widgets import MermaidVisualizer
 viz = MermaidVisualizer(initial_code="graph TD; A-->B;", width="100%", height="500px")
 viz.display()
+```
+
+#### MermaidViz (`src/edurel/widgets/mermaid_viz.py`)
+Simplified widget for programmatic Mermaid diagram rendering:
+- Only displays rendered diagram (no text input or button)
+- Automatically redraws when code is set via `set_code()`
+- Configurable width and height
+- Ideal for programmatic diagram generation
+
+Usage:
+```python
+from edurel.widgets import MermaidViz
+viz = MermaidViz(initial_code="graph TD; A-->B;", width="100%", height="500px")
+viz.display()
+# Update diagram programmatically
+viz.set_code("graph LR; X-->Y;")
 ```
 
 ## Code Style

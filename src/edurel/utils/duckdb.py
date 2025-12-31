@@ -35,49 +35,6 @@ def sql_df(con: duckdb.DuckDBPyConnection, sql: str) -> pd.DataFrame:
 # ---------------------------------------------------------------------------------------------
 # Connection utils
 # ---------------------------------------------------------------------------------------------
-def mem_con1(db_path: Optional[str] = None, verbose: bool = False) -> duckdb.DuckDBPyConnection:
-    """
-    Create an in-memory DuckDB connection, optionally loading schema and data from a directory.
-
-    The function looks for two SQL files in the db_path directory:
-    - schema.sql: DDL statements to create tables and constraints
-    - post.sql: DML statements to insert data or perform post-processing
-
-    Args:
-        db_path: Path to directory containing schema.sql and/or post.sql files.
-                 If None, creates an empty in-memory database.
-        verbose: If True, prints status messages about file loading
-
-    Returns:
-        DuckDB connection to in-memory database
-
-    Example:
-        >>> con = mem_con("./data/my_database", verbose=True)
-        >>> con.execute("SELECT * FROM users").fetchall()
-    """
-    con = duckdb.connect(database=':memory:', read_only=False)
-    if db_path is None:
-        if verbose:
-            print("No db_path. Creating empty in-memory database.")
-        return con
-
-    schema_path = Path(db_path) / "schema.sql"
-    if schema_path.exists():
-        with schema_path.open("r", encoding="utf-8") as f:
-            con.execute(f.read())
-    else:
-        if verbose:
-            print("No schema.sql. Creating empty in-memory database.")
-
-    post_path = Path(db_path) / "post.sql"
-    if post_path.exists():
-        with post_path.open("r", encoding="utf-8") as f:
-            con.execute(f.read())
-    else:
-        if verbose:
-            print("No post.sql. Skipping post-processing.")
-    return con
-
 def exe_sql_file(con: duckdb.DuckDBPyConnection, sql_file_path: str) -> None:
     with open(sql_file_path, "r", encoding="utf-8") as f:
         sql = f.read()
@@ -456,7 +413,7 @@ def csv_to_parquet(
     if out_path is None:
         raise ValueError("out_path must be provided to export parquet files")
 
-    with mem_con() as con:
+    with con_mem() as con:
         for tn in tns:
             f = p / f"{tn}.csv"
             sql_read = f"""

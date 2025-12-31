@@ -132,3 +132,96 @@ class MermaidVisualizer:
         """
         self.text_input.value = code
         self.mermaid_code = code
+
+
+class MermaidViz:
+    """
+    A simplified widget for visualizing Mermaid diagrams.
+
+    Unlike MermaidVisualizer, this widget only displays the rendered diagram
+    and automatically redraws when code is set programmatically.
+    """
+
+    def __init__(self, initial_code: str = "", width: str = "100%", height: str = "500px"):
+        """
+        Initialize the MermaidViz widget.
+
+        Args:
+            initial_code: Optional initial Mermaid code to display
+            width: Width of the output pane
+            height: Height of the output pane
+        """
+        self.mermaid_code: str = initial_code
+        self.width: str = width
+        self.height: str = height
+        self._displayed: bool = False
+
+        # Create UI components
+        self._create_widgets()
+        self._mermaid_init_js()
+
+    def _mermaid_init_js(self):
+        """Initialize Mermaid.js library."""
+        display(HTML("""
+        <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+        <script>
+        if (typeof mermaid !== 'undefined') {
+            mermaid.initialize({ startOnLoad: true });
+        }
+        </script>
+        """))
+
+    def _mermaid_html(self):
+        """Generate HTML for rendering Mermaid diagram."""
+        div_id = f"mermaid_{uuid.uuid4().hex}"
+        return HTML(f"""
+        <div id="{div_id}" class="mermaid">
+        {self.mermaid_code}
+        </div>
+        <script>
+        if (typeof mermaid !== 'undefined') {{
+            mermaid.init(undefined, "#{div_id}");
+        }}
+        </script>
+        """)
+
+    def _create_widgets(self):
+        """Create graphical output pane."""
+        self.graph_output = widgets.Output(
+            layout=widgets.Layout(width=self.width, height=self.height)
+        )
+
+    def _render(self):
+        """Render the Mermaid diagram."""
+        self.graph_output.clear_output()
+
+        if not self.mermaid_code:
+            with self.graph_output:
+                print("⚠️  No diagram code provided")
+            return
+
+        try:
+            with self.graph_output:
+                display(self._mermaid_html())
+        except Exception as e:
+            with self.graph_output:
+                print(f"❌ Error visualizing diagram: {e}")
+
+    def display(self):
+        """Display the widget in the notebook."""
+        display(self.graph_output)
+
+        # Render initial code on first display
+        if not self._displayed and self.mermaid_code:
+            self._render()
+            self._displayed = True
+
+    def set_code(self, code: str):
+        """
+        Set the Mermaid code programmatically and redraw the diagram.
+
+        Args:
+            code: Mermaid diagram code
+        """
+        self.mermaid_code = code
+        self._render()

@@ -1,0 +1,57 @@
+# write a python class for handling of a duckdb database
+- put the code in db.py in utils folder
+- the classname should be DbHandler
+## init parameters of class
+- con: a duckdb connection
+- additional_fks: a Dict[str, List[str]] that provides additional foreign keys not existing in the db
+## methods of the class
+- schema_yaml
+  - parameters
+    - omit_tags 
+  - implemention 
+    - use schema_yaml of utils/duckdb.py to create yaml with additional_fks
+    - use yaml_remove_tags of utils/yaml.py to remove tags from yaml
+    - return final yaml dict
+- schema_mermaid
+  - parameters
+    - omit_tags 
+  - implemention
+    - use yaml dict from method schema_yaml
+    - use yaml_to_mermaid of utils/yaml.py
+    - return mermaid code
+- sql_exe
+  - parameters
+    - sql code 
+  - implemention
+    - execute sql code on duckdb connection
+    - return nothing
+- sql_file_exe
+  - parameters
+    - sql file path
+  - implemention
+    - execute sql code in sql file on duckdb connection
+    - return nothing
+- sql_df
+  - parameters
+    - sql query 
+  - implemention
+    - execute sql query on duckdb connection
+    - return dataframe with results
+- sql_file_df
+  - parameters
+    - sql file path
+  - implemention
+    - execute sql query in sql file on duckdb connection
+    - return dataframe with results
+- sql_out
+  - parameters
+    - sql query 
+  - implemention
+    - execute SQL query on duckdb connection and print the result.
+    - return nothing
+- sql_file_out
+  - parameters
+    - sql file path
+  - implemention
+    - execute SQL query in sql file on duckdb connection and print the result.
+    - return nothing
