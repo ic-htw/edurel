@@ -1,6 +1,11 @@
 import os
 import edurel.utils.duckdb as ddbu
 
+def ccfraud():
+    DB_DIR = f"{os.getenv("BASE_DIR")}/databases"
+    con = ddbu.con_file(f"{DB_DIR}/ccfraud/ccfraud.duckdb")
+    return con
+
 def company_en():
     DB_DIR = f"{os.getenv("BASE_DIR")}/databases"
     con = ddbu.con_mem()
