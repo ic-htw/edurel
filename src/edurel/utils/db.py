@@ -34,7 +34,7 @@ class DbHandler:
         self.con = con
         self.additional_fks = additional_fks if additional_fks is not None else {}
 
-    def schema_yaml(self, omit_tags: Optional[List[str]] = None) -> Dict[str, Any]:
+    def schema_yaml_dict(self, omit_tags: Optional[List[str]] = None) -> Dict[str, Any]:
         """
         Get database schema as a YAML dictionary.
 
@@ -53,24 +53,33 @@ class DbHandler:
 
         return schema_dict
 
-    def schema_yaml_out(self, omit_tags: Optional[List[str]] = None) -> None:
+    def schema_yaml_str(self, omit_tags: Optional[List[str]] = None) -> str:
         """
-        Print database schema as a YAML.
+        Get database schema as a YAML string.
 
         Args:
             omit_tags: List of keys to omit from the schema
 
         Returns:
-            Dictionary representing the database schema
+            Yaml string representing the database schema
         """
         # Get schema with additional foreign keys
-        schema_dict = self.schema_yaml(omit_tags)
+        schema_dict = self.schema_yaml_dict(omit_tags)
 
         # Remove specified tags if provided
         if omit_tags:
             schema_dict = yaml_utils.yaml_remove_tags(schema_dict, omit_tags)
 
-        print(yaml_utils.yaml.dump(schema_dict, default_flow_style=False, sort_keys=False))
+        return yaml_utils.yaml.dump(schema_dict, default_flow_style=False, sort_keys=False)
+
+    def schema_yaml_print(self, omit_tags: Optional[List[str]] = None) -> None:
+        """
+        Print database schema as a YAML.
+
+        Args:
+            omit_tags: List of keys to omit from the schema
+        """
+        print
 
     def schema_mermaid(self, omit_tags: Optional[List[str]] = None, direction="TB") -> str:
         """
@@ -202,7 +211,7 @@ class DbHandler:
             sql = f.read()
         return self.sql_df(sql)
 
-    def sql_out(self, sql: str) -> None:
+    def sql_print(self, sql: str) -> None:
         """
         Execute SQL query and print the result.
 
@@ -211,7 +220,7 @@ class DbHandler:
         """
         duckdb_utils.sql_print(self.con, sql)
 
-    def sql_file_out(self, sql_file_path: str) -> None:
+    def sql_file_print(self, sql_file_path: str) -> None:
         """
         Execute SQL query from a file and print the result.
 
