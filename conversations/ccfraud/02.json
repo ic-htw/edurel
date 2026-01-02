@@ -1,0 +1,54 @@
+[
+  {
+    "type": "system",
+    "content": "\nYou are an expert SQL query generator. \nConvert natural language questions into valid SQL queries.\nuse postgres syntax.\n"
+  },
+  {
+    "type": "user",
+    "content": "\nThe database schema is defined as follows:\ntables:\n- tablename: ccfraud\n  columns:\n  - columnname: userid\n    type: SMALLINT\n  - columnname: card\n    type: SMALLINT\n  - columnname: ts\n    type: TIMESTAMP\n  - columnname: amount\n    type: FLOAT\n  - columnname: use_chip\n    type: VARCHAR\n  - columnname: mname\n    type: BIGINT\n  - columnname: mcity\n    type: VARCHAR\n  - columnname: mstate\n    type: VARCHAR\n  - columnname: zip\n    type: VARCHAR\n  - columnname: mcc\n    type: INTEGER\n  - columnname: err1\n    type: VARCHAR\n  - columnname: err2\n    type: VARCHAR\n  - columnname: err3\n    type: VARCHAR\n  - columnname: is_fraud\n    type: VARCHAR\n\n"
+  },
+  {
+    "type": "ai",
+    "content": "\n\nUnderstood. I have analyzed the `ccfraud` table schema. I am ready to convert your natural language questions into valid PostgreSQL queries.\n\nPlease provide your question, and I will generate the corresponding SQL."
+  },
+  {
+    "type": "user",
+    "content": "Explain schema"
+  },
+  {
+    "type": "ai",
+    "content": "\n\nOf course. Based on the schema provided, here is a detailed explanation of the `ccfraud` table.\n\n### High-Level Overview\n\nThe `ccfraud` table is designed to store individual credit card transaction records. Its primary purpose is to log detailed information about each transaction, including the user, card, merchant, transaction method, and most importantly, whether the transaction was identified as fraudulent. This structure is typical for a dataset used in fraud detection analysis, machine learning model training, and financial security investigations.\n\n### Column-by-Column Breakdown\n\n| Column Name | Data Type | Description & Purpose |\n| :--- | :--- | :--- |\n| **userid** | `SMALLINT` | A unique identifier for the customer or cardholder. The `SMALLINT` type suggests a limited, defined set of users in this dataset. |\n| **card** | `SMALLINT` | An identifier for the specific credit card used. A single `userid` can have multiple cards, creating a one-to-many relationship between users and their cards. |\n| **ts** | `TIMESTAMP` | The exact date and time when the transaction occurred. This is crucial for time-series analysis, identifying rapid sequences of transactions, and understanding user behavior patterns. |\n| **amount** | `FLOAT` | The monetary value of the transaction. Using `FLOAT` allows for decimal values necessary for currency. |\n| **use_chip** | `VARCHAR` | Describes how the transaction was processed. Likely values include \"Chip Transaction\", \"Swipe Transaction\", or \"Online Transaction\". This is a key feature for fraud detection, as online transactions often carry higher risk. |\n| **mname** | `BIGINT` | A unique identifier for the merchant where the transaction took place. This is an ID, not the merchant's name. |\n| **mcity** | `VARCHAR` | The city where the merchant is located. |\n| **mstate** | `VARCHAR` | The state or province where the merchant is located. |\n| **zip** | `VARCHAR` | The postal code of the merchant's location. It is stored as `VARCHAR` to accommodate various international formats and zip codes with leading zeros (e.g., '02138'). |\n| **mcc** | `INTEGER` | The Merchant Category Code. This is a standardized, numerical code used to classify the type of business (e.g., 5411 for \"Grocery Stores\", 5813 for \"Bars\"). This helps analyze spending patterns and identify unusual transactions for a user. |\n| **err1** | `VARCHAR` | A field for capturing an error code or message from the transaction processor. The presence of an error (e.g., \"Insufficient Funds\") could be a feature in a fraud model. |\n| **err"
+  },
+  {
+    "type": "user",
+    "content": "create a SQL query that outputs the following columns:\n- year\n- noof_year number of records per year\n- noof_all total number of records\n- frac fraction of records per year \nsorted by tyear;"
+  },
+  {
+    "type": "ai",
+    "content": "SELECT\n  EXTRACT(YEAR FROM ts)::INT AS year,\n  COUNT(*) AS noof_year,\n  SUM(COUNT(*)) OVER () AS noof_all,\n  COUNT(*)::NUMERIC / SUM(COUNT(*)) OVER () AS frac\nFROM ccfraud\nGROUP BY EXTRACT(YEAR FROM ts)::INT\nORDER BY year;"
+  },
+  {
+    "type": "user",
+    "content": "rewrite query format frac\n- output as percent\n- two digits after the decimal point\n- align output"
+  },
+  {
+    "type": "ai",
+    "content": "SELECT\n  EXTRACT(YEAR FROM ts)::INT AS year,\n  COUNT(*) AS noof_year,\n  SUM(COUNT(*)) OVER () AS noof_all,\n  LPAD(\n    to_char( (COUNT(*)::numeric / SUM(COUNT(*)) OVER ()) * 100, 'FM999990.00')\n    || '%',\n    9\n  ) AS frac\nFROM ccfraud\nGROUP BY 1\nORDER BY 1;"
+  },
+  {
+    "type": "user",
+    "content": "got Catalog Error: Scalar Function with name to_char does not exist!\nplease fix"
+  },
+  {
+    "type": "ai",
+    "content": "SELECT\n  EXTRACT(YEAR FROM ts)::INT AS year,\n  COUNT(*) AS noof_year,\n  SUM(COUNT(*)) OVER () AS noof_all,\n  LPAD(\n    format('%.2f%%', (COUNT(*)::numeric / SUM(COUNT(*)) OVER ()) * 100),\n    9,\n    ' '\n  ) AS frac\nFROM ccfraud\nGROUP BY 1\nORDER BY 1;"
+  },
+  {
+    "type": "user",
+    "content": "format string should be '{:5.2f}%'"
+  },
+  {
+    "type": "ai",
+    "content": "SELECT\n  EXTRACT(YEAR FROM ts)::INT AS year,\n  COUNT(*) AS noof_year,\n  SUM(COUNT(*)) OVER () AS noof_all,\n  format('%5.2f%%',\n    (COUNT(*)::numeric / SUM(COUNT(*)) OVER ()) * 100\n  ) AS frac\nFROM ccfraud\nGROUP BY 1\nORDER BY 1;"
+  }
+]
