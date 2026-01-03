@@ -29,3 +29,10 @@
 
 - add a button to class ChatMan to delete the complete conversation
 - enlarge the height of the textboxes
+
+- add a directory picker to class ChatMan to select the folder where the current conversation should be stored
+
+- make the vbox widget for the conversation history scrollable
+
+- the last solution was not quite ok. each message widget became scrollable. that was not intended.
+- the whole conversation area should become scrollable, not the individual message widgets
