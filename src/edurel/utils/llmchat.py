@@ -125,7 +125,7 @@ class LLMChat:
         for i, msg in enumerate(self.messages):
             msg_type = self._get_message_type(msg)
             content = msg.content
-            output.append(f"[{i}] {msg_type}: {content}")
+            output.append(f"[{i}] {msg_type}:\n {content}")
 
         return "\n\n".join(output)
 

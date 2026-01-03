@@ -111,7 +111,14 @@ class ChatMan:
         )
 
         # Conversation display container
-        self.conversation_container = widgets.VBox()
+        self.conversation_container = widgets.VBox(
+            # layout=widgets.Layout(
+            #     width="100%",
+            #     height="600px",
+            #     overflow_y="auto",
+            #     border="1px solid #ccc"
+            # )
+        )
 
         # Output for messages
         self.output = widgets.Output()
@@ -221,10 +228,13 @@ class ChatMan:
             layout=widgets.Layout(width="40px", height="auto")
         )
 
-        # Message content textarea
+        # Message content textarea - calculate height based on content
+        content_lines = msg.content.count('\n') + 1
+        textarea_height = max(80, min(300, content_lines * 20 + 20))
+
         msg_textarea = widgets.Textarea(
             value=msg.content,
-            layout=widgets.Layout(width="70%", height="120px")
+            layout=widgets.Layout(width="70%", height=f"{textarea_height}px")
         )
 
         # Replace button
