@@ -41,6 +41,20 @@ class ChatMan:
 
     def _create_widgets(self):
         """Create all UI widgets."""
+        # Directory picker section
+        self.directory_input = widgets.Text(
+            value=str(self.chat_path),
+            description="Directory:",
+            layout=widgets.Layout(width="70%")
+        )
+
+        self.directory_btn = widgets.Button(
+            description="Set Directory",
+            button_style="primary",
+            icon="folder",
+            layout=widgets.Layout(width="28%")
+        )
+
         # File operations section
         self.filename_input = widgets.Text(
             value="conversation.json",
@@ -103,6 +117,7 @@ class ChatMan:
         self.output = widgets.Output()
 
         # Set up event handlers
+        self.directory_btn.on_click(self._on_set_directory)
         self.save_btn.on_click(self._on_save)
         self.load_btn.on_click(self._on_load)
         self.clear_btn.on_click(self._on_clear)
@@ -111,6 +126,12 @@ class ChatMan:
 
     def _setup_layout(self):
         """Set up the widget layout."""
+        # Directory picker row
+        directory_row = widgets.HBox([
+            self.directory_input,
+            self.directory_btn
+        ])
+
         # File operations row
         file_ops_row = widgets.HBox([
             self.filename_input,
@@ -118,6 +139,7 @@ class ChatMan:
             self.load_btn
         ])
         file_ops = widgets.VBox([
+            directory_row,
             file_ops_row,
             self.clear_btn
         ])
@@ -336,6 +358,31 @@ class ChatMan:
             with self.output:
                 self.output.clear_output()
                 print(f"Error deleting message: {e}")
+
+    def _on_set_directory(self, _button):
+        """Handle set directory button click."""
+        directory = self.directory_input.value.strip()
+
+        if not directory:
+            with self.output:
+                self.output.clear_output()
+                print("Error: Directory cannot be empty")
+            return
+
+        try:
+            new_path = Path(directory)
+            new_path.mkdir(parents=True, exist_ok=True)
+            self.chat_path = new_path
+            self.directory_input.value = str(self.chat_path)
+
+            with self.output:
+                self.output.clear_output()
+                print(f"Directory set to: {self.chat_path}")
+
+        except Exception as e:
+            with self.output:
+                self.output.clear_output()
+                print(f"Error setting directory: {e}")
 
     def _on_save(self, _button):
         """Handle save button click."""
