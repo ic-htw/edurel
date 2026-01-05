@@ -1,6 +1,16 @@
 import os
 import edurel.utils.duckdb as ddbu
 
+def adw_olap():
+    DB_DIR = f"{os.getenv("BASE_DIR")}/databases"
+    con = ddbu.con_file(f"{DB_DIR}/adw-olap/adw-olap.duckdb")
+    return con
+
+def adw_oltp():
+    DB_DIR = f"{os.getenv("BASE_DIR")}/databases"
+    con = ddbu.con_file(f"{DB_DIR}/adw-oltp/adw-oltp.duckdb")
+    return con
+
 def ccfraud():
     DB_DIR = f"{os.getenv("BASE_DIR")}/databases"
     con = ddbu.con_file(f"{DB_DIR}/ccfraud/ccfraud.duckdb")
@@ -14,7 +24,3 @@ def company_en():
     ddbu.exe_sql_file(con, f"{SQL_DIR}/data.sql")
     return con
 
-def adw_oltp():
-    DB_DIR = f"{os.getenv("BASE_DIR")}/databases"
-    con = ddbu.con_file(f"{DB_DIR}/adw-oltp/adw-oltp.duckdb")
-    return con

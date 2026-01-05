@@ -79,7 +79,7 @@ class DbHandler:
         Args:
             omit_tags: List of keys to omit from the schema
         """
-        print
+        print(self.schema_yaml_str(omit_tags))
 
     def schema_mermaid(self, omit_tags: Optional[List[str]] = None, direction="TB") -> str:
         """
@@ -92,7 +92,7 @@ class DbHandler:
             String containing Mermaid ER diagram code
         """
         # Get schema YAML
-        schema_dict = self.schema_yaml(omit_tags)
+        schema_dict = self.schema_yaml_dict(omit_tags)
 
         # Convert to Mermaid
         mermaid_code = yaml_utils.yaml_to_mermaid(schema_dict, direction)
