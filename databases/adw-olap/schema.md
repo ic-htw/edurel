@@ -106,3 +106,44 @@ This is a classic **star/snowflake schema** for enterprise sales and financial a
 ### **FactInternetSalesReason** (Bridge Table)
 - **FactInternetSales** - Links to sales transaction
 - **DimSalesReason** - Reason for purchase (many-to-many relationship)
+
+## FactCallCenter Table
+
+**Purpose:** Tracks call center operational metrics and performance by date, wage type, and shift.
+
+### **Key Components:**
+
+**Primary Key:**
+- FactCallCenterID - Unique identifier for each record
+
+**Foreign Keys:**
+- DateKey → DimDate (enables time-based analysis)
+
+**Dimensions (Degenerate):**
+- **WageType** - Employee wage classification
+- **Shift** - Work shift identifier
+- **Date** - Timestamp of the record
+
+**Measures:**
+
+*Staffing Metrics:*
+- LevelOneOperators - Count of tier 1 support staff
+- LevelTwoOperators - Count of tier 2 support staff
+- TotalOperators - Total staff count
+
+*Call Volume Metrics:*
+- Calls - Total calls received
+- AutomaticResponses - Calls handled by automated systems
+- Orders - Sales orders generated from calls
+- IssuesRaised - Problems escalated
+
+*Performance Metrics:*
+- AverageTimePerIssue - Efficiency measure (seconds/minutes)
+- ServiceGrade - Quality score (0-1 scale typically)
+
+### **Use Cases:**
+- Analyze call center efficiency by shift/wage type
+- Track conversion rates (calls → orders)
+- Monitor staffing levels vs. call volume
+- Measure service quality trends over time
+- Optimize shift scheduling based on performance

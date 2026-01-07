@@ -156,7 +156,7 @@ WITH DailyOperatorMetrics AS (
         dd.FullDateAlternateKey AS Date,
         dd.CalendarYear,
         dd.CalendarQuarter,
-        dd.CalendarMonth,
+        dd.MonthNumberOfYear AS CalendarMonth,
         dd.EnglishDayNameOfWeek AS DayOfWeek,
         fcc.Shift,
         fcc.WageType,
@@ -216,8 +216,8 @@ StaffingImpactAnalysis AS (
         ROUND(AVG(AverageTimePerIssue), 2) AS AvgTimePerIssue,
         ROUND(AVG(Orders), 2) AS AvgOrders,
         -- Performance variability
-        ROUND(STDEV(ConversionRate), 2) AS StdDevConversionRate,
-        ROUND(STDEV(ServiceGrade), 4) AS StdDevServiceGrade,
+        ROUND(STDDEV_SAMP(ConversionRate), 2) AS StdDevConversionRate,
+        ROUND(STDDEV_SAMP(ServiceGrade), 4) AS StdDevServiceGrade,
         -- Min/Max for ranges
         ROUND(MIN(ConversionRate), 2) AS MinConversionRate,
         ROUND(MAX(ConversionRate), 2) AS MaxConversionRate,
@@ -544,7 +544,7 @@ IssueAnalysisByFactors AS (
         ROUND(AVG(AutoResponseRate), 2) AS AvgAutoResponseRate,
         ROUND(AVG(Calls), 2) AS AvgCalls,
         -- Statistical measures
-        ROUND(STDEV(IssueRate), 2) AS StdDevIssueRate,
+        ROUND(STDDEV(IssueRate), 2) AS StdDevIssueRate,
         ROUND(MIN(IssueRate), 2) AS MinIssueRate,
         ROUND(MAX(IssueRate), 2) AS MaxIssueRate,
         ROUND(MIN(AverageTimePerIssue), 2) AS MinResolutionTime,
@@ -753,7 +753,7 @@ ConversionAnalysis AS (
         ROUND(AVG(OrdersPerOperator), 2) AS AvgOrdersPerOperator,
         ROUND(AVG(SeniorOperatorPct), 2) AS AvgSeniorOperatorPct,
         -- Variability metrics
-        ROUND(STDEV(OverallConversionRate), 2) AS StdDevConversionRate,
+        ROUND(STDDEV(OverallConversionRate), 2) AS StdDevConversionRate,
         ROUND(MIN(OverallConversionRate), 2) AS MinConversionRate,
         ROUND(MAX(OverallConversionRate), 2) AS MaxConversionRate
     FROM ConversionSegmentation

@@ -32,7 +32,7 @@ WITH CustomerFirstLastPurchase AS (
         MAX(fis.OrderDate) AS LastPurchaseDate,
         COUNT(DISTINCT fis.SalesOrderNumber) AS TotalOrders,
         COUNT(*) AS TotalLineItems,
-        CAST(JULIANDAY(MAX(fis.OrderDate)) - JULIANDAY(MIN(fis.OrderDate)) AS INTEGER) AS CustomerTenureDays
+        (MAX(fis.OrderDate)::DATE - MIN(fis.OrderDate)::DATE) AS CustomerTenureDays
     FROM FactInternetSales fis
     GROUP BY fis.CustomerKey
 ),
@@ -57,7 +57,7 @@ CustomerLifetimeMetrics AS (
         cflp.LastPurchaseDate,
         cflp.CustomerTenureDays,
         ROUND(cflp.CustomerTenureDays / 365.25, 2) AS CustomerTenureYears,
-        CAST(JULIANDAY('now') - JULIANDAY(cflp.LastPurchaseDate) AS INTEGER) AS DaysSinceLastPurchase,
+        (CURRENT_DATE - cflp.LastPurchaseDate::DATE) AS DaysSinceLastPurchase,
         cflp.TotalOrders,
         cflp.TotalLineItems,
         COUNT(DISTINCT DATE(fis.OrderDate)) AS UniquePurchaseDays,
@@ -160,8 +160,8 @@ DemographicByTier AS (
         ROUND(AVG(ct.DaysSinceLastPurchase), 2) AS AvgDaysSinceLastPurchase,
         ROUND(SUM(ct.LifetimeRevenue), 2) AS TotalTierRevenue,
         ROUND(100.0 * SUM(ct.LifetimeRevenue) / (SELECT SUM(LifetimeRevenue) FROM CustomerTiering), 2) AS TierRevenueSharePct,
-        MODE() WITHIN GROUP (ORDER BY ct.Education) AS MostCommonEducation,
-        MODE() WITHIN GROUP (ORDER BY ct.Occupation) AS MostCommonOccupation
+        MODE(ct.Education) AS MostCommonEducation,
+        MODE(ct.Occupation) AS MostCommonOccupation
     FROM CustomerTiering ct
     GROUP BY ct.CustomerTier
 )
@@ -231,8 +231,8 @@ WITH CustomerPurchaseHistory AS (
         MIN(fis.OrderDate) AS FirstPurchaseDate,
         MAX(fis.OrderDate) AS LastPurchaseDate,
         COUNT(DISTINCT fis.SalesOrderNumber) AS TotalOrders,
-        CAST(JULIANDAY('now') - JULIANDAY(MAX(fis.OrderDate)) AS INTEGER) AS DaysSinceLastPurchase,
-        CAST(JULIANDAY(MAX(fis.OrderDate)) - JULIANDAY(MIN(fis.OrderDate)) AS INTEGER) AS CustomerTenureDays,
+        (CURRENT_DATE - MAX(fis.OrderDate)::DATE) AS DaysSinceLastPurchase,
+        (MAX(fis.OrderDate)::DATE - MIN(fis.OrderDate)::DATE) AS CustomerTenureDays,
         ROUND(SUM(fis.SalesAmount), 2) AS TotalRevenue,
         ROUND(SUM(fis.SalesAmount - fis.TotalProductCost), 2) AS TotalGrossProfit,
         ROUND(AVG(fis.SalesAmount), 2) AS AvgTransactionValue
@@ -445,7 +445,7 @@ WITH CustomerPurchaseTimeline AS (
         COUNT(DISTINCT fis.SalesOrderNumber) OVER (PARTITION BY fis.CustomerKey ORDER BY fis.OrderDate) AS CumulativeOrders,
         SUM(fis.SalesAmount) OVER (PARTITION BY fis.CustomerKey ORDER BY fis.OrderDate) AS CumulativeRevenue,
         LAG(fis.OrderDate) OVER (PARTITION BY fis.CustomerKey ORDER BY fis.OrderDate) AS PreviousOrderDate,
-        CAST(JULIANDAY(fis.OrderDate) - JULIANDAY(LAG(fis.OrderDate) OVER (PARTITION BY fis.CustomerKey ORDER BY fis.OrderDate)) AS INTEGER) AS DaysSincePreviousOrder
+        (fis.OrderDate::DATE - (LAG(fis.OrderDate) OVER (PARTITION BY fis.CustomerKey ORDER BY fis.OrderDate))::DATE) AS DaysSincePreviousOrder
     FROM FactInternetSales fis
 ),
 
@@ -454,16 +454,16 @@ CustomerCurrentState AS (
         cpt.CustomerKey,
         MIN(cpt.OrderDate) AS FirstPurchaseDate,
         MAX(cpt.OrderDate) AS LastPurchaseDate,
-        CAST(JULIANDAY('now') - JULIANDAY(MIN(cpt.OrderDate)) AS INTEGER) AS CustomerAgeDays,
-        CAST(JULIANDAY('now') - JULIANDAY(MAX(cpt.OrderDate)) AS INTEGER) AS DaysSinceLastPurchase,
-        CAST(JULIANDAY(MAX(cpt.OrderDate)) - JULIANDAY(MIN(cpt.OrderDate)) AS INTEGER) AS ActiveLifespanDays,
+        (CURRENT_DATE - MIN(cpt.OrderDate)::DATE) AS CustomerAgeDays,
+        (CURRENT_DATE - MAX(cpt.OrderDate)::DATE) AS DaysSinceLastPurchase,
+        (MAX(cpt.OrderDate)::DATE - MIN(cpt.OrderDate)::DATE) AS ActiveLifespanDays,
         COUNT(DISTINCT cpt.SalesOrderNumber) AS TotalOrders,
         MAX(cpt.CumulativeOrders) AS MaxOrders,
         ROUND(SUM(cpt.SalesAmount), 2) AS TotalRevenue,
         ROUND(SUM(cpt.GrossProfit), 2) AS TotalGrossProfit,
         ROUND(AVG(cpt.SalesAmount), 2) AS AvgTransactionValue,
         ROUND(AVG(cpt.DaysSincePreviousOrder), 2) AS AvgDaysBetweenOrders,
-        ROUND(CAST(JULIANDAY(MAX(cpt.OrderDate)) - JULIANDAY(MIN(cpt.OrderDate)) AS REAL) / NULLIF(COUNT(DISTINCT cpt.SalesOrderNumber) - 1, 0), 2) AS AvgPurchaseCycleDays
+        ROUND(CAST((MAX(cpt.OrderDate)::DATE - MIN(cpt.OrderDate)::DATE) AS DOUBLE) / NULLIF(COUNT(DISTINCT cpt.SalesOrderNumber) - 1, 0), 2) AS AvgPurchaseCycleDays
     FROM CustomerPurchaseTimeline cpt
     GROUP BY cpt.CustomerKey
 ),
@@ -829,9 +829,9 @@ WITH CustomerPurchaseMetrics AS (
         MIN(fis.OrderDate) AS FirstPurchaseDate,
         MAX(fis.OrderDate) AS LastPurchaseDate,
         COUNT(DISTINCT fis.SalesOrderNumber) AS TotalOrders,
-        CAST(JULIANDAY('now') - JULIANDAY(MAX(fis.OrderDate)) AS INTEGER) AS DaysSinceLastPurchase,
-        CAST(JULIANDAY(MAX(fis.OrderDate)) - JULIANDAY(MIN(fis.OrderDate)) AS INTEGER) AS CustomerTenureDays,
-        ROUND(CAST(JULIANDAY(MAX(fis.OrderDate)) - JULIANDAY(MIN(fis.OrderDate)) AS REAL) / NULLIF(COUNT(DISTINCT fis.SalesOrderNumber) - 1, 0), 2) AS AvgDaysBetweenOrders,
+        (CURRENT_DATE - MAX(fis.OrderDate)::DATE) AS DaysSinceLastPurchase,
+        (MAX(fis.OrderDate)::DATE - MIN(fis.OrderDate)::DATE) AS CustomerTenureDays,
+        ROUND(CAST((MAX(fis.OrderDate)::DATE - MIN(fis.OrderDate)::DATE) AS DOUBLE) / NULLIF(COUNT(DISTINCT fis.SalesOrderNumber) - 1, 0), 2) AS AvgDaysBetweenOrders,
         ROUND(SUM(fis.SalesAmount), 2) AS LifetimeRevenue,
         ROUND(SUM(fis.SalesAmount - fis.TotalProductCost), 2) AS LifetimeGrossProfit,
         ROUND(AVG(fis.SalesAmount), 2) AS AvgTransactionValue,
@@ -844,10 +844,10 @@ RecentActivityTrends AS (
     -- Compare recent 3 months vs. previous 3 months
     SELECT
         fis.CustomerKey,
-        COUNT(DISTINCT CASE WHEN JULIANDAY('now') - JULIANDAY(fis.OrderDate) <= 90 THEN fis.SalesOrderNumber END) AS OrdersLast90Days,
-        COUNT(DISTINCT CASE WHEN JULIANDAY('now') - JULIANDAY(fis.OrderDate) BETWEEN 91 AND 180 THEN fis.SalesOrderNumber END) AS OrdersPrevious90Days,
-        ROUND(SUM(CASE WHEN JULIANDAY('now') - JULIANDAY(fis.OrderDate) <= 90 THEN fis.SalesAmount ELSE 0 END), 2) AS RevenueLast90Days,
-        ROUND(SUM(CASE WHEN JULIANDAY('now') - JULIANDAY(fis.OrderDate) BETWEEN 91 AND 180 THEN fis.SalesAmount ELSE 0 END), 2) AS RevenuePrevious90Days
+        COUNT(DISTINCT CASE WHEN (CURRENT_DATE - fis.OrderDate::DATE) <= 90 THEN fis.SalesOrderNumber END) AS OrdersLast90Days,
+        COUNT(DISTINCT CASE WHEN (CURRENT_DATE - fis.OrderDate::DATE) BETWEEN 91 AND 180 THEN fis.SalesOrderNumber END) AS OrdersPrevious90Days,
+        ROUND(SUM(CASE WHEN (CURRENT_DATE - fis.OrderDate::DATE) <= 90 THEN fis.SalesAmount ELSE 0 END), 2) AS RevenueLast90Days,
+        ROUND(SUM(CASE WHEN (CURRENT_DATE - fis.OrderDate::DATE) BETWEEN 91 AND 180 THEN fis.SalesAmount ELSE 0 END), 2) AS RevenuePrevious90Days
     FROM FactInternetSales fis
     GROUP BY fis.CustomerKey
 ),
