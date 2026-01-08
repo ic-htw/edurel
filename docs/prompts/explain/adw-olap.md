@@ -3,6 +3,7 @@ explain the following multidimensional schema
 - identify fact tables
 - identify dimension tables
 - identify hierachies 
+- identify relationships 
 ```yaml
 tables:
 - tablename: DimAccount

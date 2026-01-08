@@ -24,3 +24,8 @@ def company_en():
     ddbu.exe_sql_file(con, f"{SQL_DIR}/data.sql")
     return con
 
+def foodmart():
+    DB_DIR = f"{os.getenv("BASE_DIR")}/databases"
+    con = ddbu.con_file(f"{DB_DIR}/foodmart/foodmart.duckdb")
+    return con
+

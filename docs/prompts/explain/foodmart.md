@@ -1,0 +1,118 @@
+you are an expert business intelligence spezialist.
+explain the following multidimensional schema
+- identify fact tables
+- identify dimension tables
+- identify hierachies 
+- identify relationships 
+```yaml
+tables:
+- tablename: Customer
+  columns:
+  - columnname: Customerid
+    type: INTEGER
+  - columnname: Lastname
+    type: VARCHAR
+  - columnname: Firstname
+    type: VARCHAR
+  - columnname: City
+    type: VARCHAR
+  - columnname: State
+    type: VARCHAR
+  - columnname: Country
+    type: VARCHAR
+  - columnname: Maritalstatus
+    type: VARCHAR
+  - columnname: Yearlyincome
+    type: VARCHAR
+  - columnname: Gender
+    type: VARCHAR
+  - columnname: Education
+    type: VARCHAR
+  primary_key:
+  - Customerid
+- tablename: Product
+  columns:
+  - columnname: Productid
+    type: INTEGER
+  - columnname: Pname
+    type: VARCHAR
+  - columnname: Brand
+    type: VARCHAR
+  - columnname: Subcategory
+    type: VARCHAR
+  - columnname: Category
+    type: VARCHAR
+  - columnname: Department
+    type: VARCHAR
+  - columnname: Family
+    type: VARCHAR
+  primary_key:
+  - Productid
+- tablename: Sales
+  columns:
+  - columnname: Productid
+    type: INTEGER
+  - columnname: Timeid
+    type: INTEGER
+  - columnname: Customerid
+    type: INTEGER
+  - columnname: Storeid
+    type: INTEGER
+  - columnname: Storesales
+    type: DECIMAL(13,2)
+  - columnname: Unitsales
+    type: INTEGER
+  foreign_keys:
+  - sourcecolumns:
+    - CustomerId
+    targettable: Customer
+    targetcolumns:
+    - CustomerId
+  - sourcecolumns:
+    - ProductID
+    targettable: Product
+    targetcolumns:
+    - ProductID
+  - sourcecolumns:
+    - StoreId
+    targettable: Store
+    targetcolumns:
+    - StoreId
+  - sourcecolumns:
+    - TimeId
+    targettable: TimeByDay
+    targetcolumns:
+    - TimeId
+- tablename: Store
+  columns:
+  - columnname: Storeid
+    type: INTEGER
+  - columnname: Stype
+    type: VARCHAR
+  - columnname: Sname
+    type: VARCHAR
+  - columnname: City
+    type: VARCHAR
+  - columnname: State
+    type: VARCHAR
+  - columnname: Country
+    type: VARCHAR
+  primary_key:
+  - Storeid
+- tablename: Timebyday
+  columns:
+  - columnname: Timeid
+    type: INTEGER
+  - columnname: TMonth
+    type: VARCHAR
+  - columnname: TYear
+    type: INTEGER
+  - columnname: TDayofmonth
+    type: INTEGER
+  - columnname: TMonthnumber
+    type: INTEGER
+  - columnname: TQuarter
+    type: VARCHAR
+  primary_key:
+  - Timeid
+```
