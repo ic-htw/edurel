@@ -1,0 +1,78 @@
+tables:
+- tablename: EmpProj
+  columns:
+  - columnname: EID
+    type: INTEGER
+  - columnname: PID
+    type: INTEGER
+  - columnname: NoOfHoursPerWeek
+    type: INTEGER
+  primary_key:
+  - EID
+  - PID
+  foreign_keys:
+  - sourcecolumns:
+    - EID
+    targettable: Employee
+    targetcolumns:
+    - EID
+  - sourcecolumns:
+    - PID
+    targettable: Project
+    targetcolumns:
+    - PID
+- tablename: Employee
+  columns:
+  - columnname: EID
+    type: INTEGER
+  - columnname: OUID
+    type: INTEGER
+  - columnname: LastName
+    type: VARCHAR
+  - columnname: Hiredate
+    type: DATE
+  - columnname: Salary
+    type: DECIMAL(9,2)
+  - columnname: Bonus
+    type: DECIMAL(9,2)
+  primary_key:
+  - EID
+  foreign_keys:
+  - sourcecolumns:
+    - OUID
+    targettable: OrgUnit
+    targetcolumns:
+    - OUID
+- tablename: OrgUnit
+  columns:
+  - columnname: OUID
+    type: INTEGER
+  - columnname: Head
+    type: INTEGER
+  - columnname: SuperUnit
+    type: INTEGER
+  - columnname: Name
+    type: VARCHAR
+  primary_key:
+  - OUID
+  foreign_keys:
+  - sourcecolumns:
+    - Head
+    targettable: Employee
+    targetcolumns:
+    - EID
+  - sourcecolumns:
+    - SuperUnit
+    targettable: OrgUnit
+    targetcolumns:
+    - OUID
+- tablename: Project
+  columns:
+  - columnname: PID
+    type: INTEGER
+  - columnname: Title
+    type: VARCHAR
+  - columnname: Budget
+    type: DECIMAL(13,2)
+  primary_key:
+  - PID

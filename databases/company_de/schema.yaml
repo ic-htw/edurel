@@ -1,0 +1,80 @@
+tables:
+- tablename: MaProj
+  columns:
+  - columnname: MID
+    type: INTEGER
+  - columnname: PID
+    type: INTEGER
+  - columnname: StdProWoche
+    type: INTEGER
+  primary_key:
+  - MID
+  - PID
+  foreign_keys:
+  - sourcecolumns:
+    - MID
+    targettable: Mitarbeiter
+    targetcolumns:
+    - MID
+  - sourcecolumns:
+    - PID
+    targettable: Projekt
+    targetcolumns:
+    - PID
+- tablename: Mitarbeiter
+  columns:
+  - columnname: MID
+    type: INTEGER
+  - columnname: OEID
+    type: INTEGER
+  - columnname: Name
+    type: VARCHAR
+  - columnname: Vorname
+    type: VARCHAR
+  - columnname: Eintrittsdatum
+    type: DATE
+  - columnname: Gehalt
+    type: DECIMAL(9,2)
+  - columnname: Bonus
+    type: DECIMAL(9,2)
+  primary_key:
+  - MID
+  foreign_keys:
+  - sourcecolumns:
+    - OEID
+    targettable: Orgeinheit
+    targetcolumns:
+    - OEID
+- tablename: Orgeinheit
+  columns:
+  - columnname: OEID
+    type: INTEGER
+  - columnname: Leitung
+    type: INTEGER
+  - columnname: Obereinheit
+    type: INTEGER
+  - columnname: Bezeichnung
+    type: VARCHAR
+  primary_key:
+  - OEID
+  foreign_keys:
+  - sourcecolumns:
+    - Leitung
+    targettable: Mitarbeiter
+    targetcolumns:
+    - MID
+  - sourcecolumns:
+    - Obereinheit
+    targettable: Orgeinheit
+    targetcolumns:
+    - OEID
+- tablename: Projekt
+  columns:
+  - columnname: PID
+    type: INTEGER
+  - columnname: Titel
+    type: VARCHAR
+  - columnname: Budget
+    type: DECIMAL(13,2)
+  primary_key:
+  - PID
