@@ -1062,186 +1062,179 @@ This is a classic **star/snowflake schema** for enterprise sales and financial a
 - **DimSalesReason** - Reason for purchase (many-to-many relationship)
 ## SQL Query
 ```sql
-WITH CustomerFirstLastPurchase AS (
+WITH CustomerPurchaseTimeline AS (
     SELECT
         fis.CustomerKey,
-        MIN(fis.OrderDate) AS FirstPurchaseDate,
-        MAX(fis.OrderDate) AS LastPurchaseDate,
-        COUNT(DISTINCT fis.SalesOrderNumber) AS TotalOrders,
-        COUNT(*) AS TotalLineItems,
-        (MAX(fis.OrderDate)::DATE - MIN(fis.OrderDate)::DATE) AS CustomerTenureDays
+        fis.OrderDate,
+        fis.SalesOrderNumber,
+        fis.SalesAmount,
+        fis.SalesAmount - fis.TotalProductCost AS GrossProfit,
+        ROW_NUMBER() OVER (PARTITION BY fis.CustomerKey ORDER BY fis.OrderDate) AS PurchaseSequence,
+        COUNT(DISTINCT fis.SalesOrderNumber) OVER (PARTITION BY fis.CustomerKey ORDER BY fis.OrderDate) AS CumulativeOrders,
+        SUM(fis.SalesAmount) OVER (PARTITION BY fis.CustomerKey ORDER BY fis.OrderDate) AS CumulativeRevenue,
+        LAG(fis.OrderDate) OVER (PARTITION BY fis.CustomerKey ORDER BY fis.OrderDate) AS PreviousOrderDate,
+        (fis.OrderDate::DATE - (LAG(fis.OrderDate) OVER (PARTITION BY fis.CustomerKey ORDER BY fis.OrderDate))::DATE) AS DaysSincePreviousOrder
     FROM FactInternetSales fis
-    GROUP BY fis.CustomerKey
 ),
 
-CustomerLifetimeMetrics AS (
+CustomerCurrentState AS (
     SELECT
-        fis.CustomerKey,
+        cpt.CustomerKey,
+        MIN(cpt.OrderDate) AS FirstPurchaseDate,
+        MAX(cpt.OrderDate) AS LastPurchaseDate,
+        (CURRENT_DATE - MIN(cpt.OrderDate)::DATE) AS CustomerAgeDays,
+        (CURRENT_DATE - MAX(cpt.OrderDate)::DATE) AS DaysSinceLastPurchase,
+        (MAX(cpt.OrderDate)::DATE - MIN(cpt.OrderDate)::DATE) AS ActiveLifespanDays,
+        COUNT(DISTINCT cpt.SalesOrderNumber) AS TotalOrders,
+        MAX(cpt.CumulativeOrders) AS MaxOrders,
+        ROUND(SUM(cpt.SalesAmount), 2) AS TotalRevenue,
+        ROUND(SUM(cpt.GrossProfit), 2) AS TotalGrossProfit,
+        ROUND(AVG(cpt.SalesAmount), 2) AS AvgTransactionValue,
+        ROUND(AVG(cpt.DaysSincePreviousOrder), 2) AS AvgDaysBetweenOrders,
+        ROUND(CAST((MAX(cpt.OrderDate)::DATE - MIN(cpt.OrderDate)::DATE) AS DOUBLE) / NULLIF(COUNT(DISTINCT cpt.SalesOrderNumber) - 1, 0), 2) AS AvgPurchaseCycleDays
+    FROM CustomerPurchaseTimeline cpt
+    GROUP BY cpt.CustomerKey
+),
+
+LifecycleStageAssignment AS (
+    SELECT
+        ccs.CustomerKey,
         c.FirstName || ' ' || c.LastName AS CustomerName,
         c.YearlyIncome,
         c.EnglishEducation AS Education,
         c.EnglishOccupation AS Occupation,
-        c.Gender,
-        c.MaritalStatus,
-        c.TotalChildren,
-        c.NumberCarsOwned,
-        c.HouseOwnerFlag,
         g.EnglishCountryRegionName AS Country,
-        g.StateProvinceName AS State,
-        g.City,
         st.SalesTerritoryRegion,
-        cflp.FirstPurchaseDate,
-        cflp.LastPurchaseDate,
-        cflp.CustomerTenureDays,
-        ROUND(cflp.CustomerTenureDays / 365.25, 2) AS CustomerTenureYears,
-        (CURRENT_DATE - cflp.LastPurchaseDate::DATE) AS DaysSinceLastPurchase,
-        cflp.TotalOrders,
-        cflp.TotalLineItems,
-        COUNT(DISTINCT DATE(fis.OrderDate)) AS UniquePurchaseDays,
-        SUM(fis.OrderQuantity) AS TotalUnits,
-        ROUND(SUM(fis.SalesAmount), 2) AS LifetimeRevenue,
-        ROUND(SUM(fis.SalesAmount - fis.TotalProductCost), 2) AS LifetimeGrossProfit,
-        ROUND(100.0 * SUM(fis.SalesAmount - fis.TotalProductCost) / NULLIF(SUM(fis.SalesAmount), 0), 2) AS LifetimeMarginPct,
-        ROUND(AVG(fis.SalesAmount), 2) AS AvgLineItemValue,
-        ROUND(SUM(fis.SalesAmount) / NULLIF(cflp.TotalOrders, 0), 2) AS AvgOrderValue,
-        ROUND(SUM(fis.DiscountAmount), 2) AS TotalDiscounts,
-        ROUND(100.0 * SUM(fis.DiscountAmount) / NULLIF(SUM(fis.SalesAmount + fis.DiscountAmount), 0), 2) AS AvgDiscountPct,
-        COUNT(DISTINCT pc.EnglishProductCategoryName) AS UniqueCategories,
-        COUNT(DISTINCT fis.ProductKey) AS UniqueProducts
-    FROM FactInternetSales fis
-    INNER JOIN CustomerFirstLastPurchase cflp ON fis.CustomerKey = cflp.CustomerKey
-    INNER JOIN DimCustomer c ON fis.CustomerKey = c.CustomerKey
+        ccs.FirstPurchaseDate,
+        ccs.LastPurchaseDate,
+        ccs.CustomerAgeDays,
+        ROUND(ccs.CustomerAgeDays / 365.25, 2) AS CustomerAgeYears,
+        ccs.DaysSinceLastPurchase,
+        ccs.ActiveLifespanDays,
+        ccs.TotalOrders,
+        ccs.TotalRevenue,
+        ccs.TotalGrossProfit,
+        ccs.AvgTransactionValue,
+        ccs.AvgDaysBetweenOrders,
+        ccs.AvgPurchaseCycleDays,
+        -- Lifecycle Stage Logic
+        CASE
+            -- Churned: No purchase in over 1 year
+            WHEN ccs.DaysSinceLastPurchase > 365 THEN 'Churned'
+            -- At-Risk: No purchase in 6-12 months, had been active
+            WHEN ccs.DaysSinceLastPurchase > 180 AND ccs.TotalOrders >= 3 THEN 'At-Risk'
+            -- New: Less than 90 days old, 1-2 orders
+            WHEN ccs.CustomerAgeDays <= 90 AND ccs.TotalOrders <= 2 THEN 'New'
+            -- Developing: 90-180 days old OR 2-4 orders
+            WHEN (ccs.CustomerAgeDays BETWEEN 91 AND 180) OR (ccs.TotalOrders BETWEEN 2 AND 4) THEN 'Developing'
+            -- Growing: 180-365 days old OR 5-10 orders
+            WHEN (ccs.CustomerAgeDays BETWEEN 181 AND 365) OR (ccs.TotalOrders BETWEEN 5 AND 10) THEN 'Growing'
+            -- Mature: Over 1 year old AND 11+ orders
+            WHEN ccs.CustomerAgeDays > 365 AND ccs.TotalOrders >= 11 AND ccs.DaysSinceLastPurchase <= 180 THEN 'Mature'
+            -- Inactive: Doesn't fit other categories, low engagement
+            ELSE 'Inactive'
+        END AS LifecycleStage
+    FROM CustomerCurrentState ccs
+    INNER JOIN DimCustomer c ON ccs.CustomerKey = c.CustomerKey
     INNER JOIN DimGeography g ON c.GeographyKey = g.GeographyKey
     INNER JOIN DimSalesTerritory st ON g.SalesTerritoryKey = st.SalesTerritoryKey
-    INNER JOIN DimProduct p ON fis.ProductKey = p.ProductKey
-    LEFT JOIN DimProductSubcategory psc ON p.ProductSubcategoryKey = psc.ProductSubcategoryKey
-    LEFT JOIN DimProductCategory pc ON psc.ProductCategoryKey = pc.ProductCategoryKey
-    GROUP BY fis.CustomerKey, c.FirstName, c.LastName, c.YearlyIncome, c.EnglishEducation,
-             c.EnglishOccupation, c.Gender, c.MaritalStatus, c.TotalChildren, c.NumberCarsOwned,
-             c.HouseOwnerFlag, g.EnglishCountryRegionName, g.StateProvinceName, g.City,
-             st.SalesTerritoryRegion, cflp.FirstPurchaseDate, cflp.LastPurchaseDate,
-             cflp.CustomerTenureDays, cflp.TotalOrders, cflp.TotalLineItems
 ),
 
-CustomerValueMetrics AS (
+StageCharacteristics AS (
     SELECT
-        clm.*,
-        -- Annualized metrics
-        ROUND(clm.LifetimeRevenue / NULLIF(clm.CustomerTenureYears, 0), 2) AS RevenuePerYear,
-        ROUND(clm.LifetimeGrossProfit / NULLIF(clm.CustomerTenureYears, 0), 2) AS ProfitPerYear,
-        ROUND(clm.TotalOrders / NULLIF(clm.CustomerTenureYears, 0), 2) AS OrdersPerYear,
-        -- Purchase frequency (days between orders)
-        ROUND(clm.CustomerTenureDays / NULLIF(clm.TotalOrders - 1, 0), 2) AS AvgDaysBetweenOrders,
-        -- Customer activity ratio (purchase days / tenure days)
-        ROUND(100.0 * clm.UniquePurchaseDays / NULLIF(clm.CustomerTenureDays, 0), 2) AS ActivityRatioPct,
-        -- Recency score (0-100, higher is better/more recent)
-        CASE
-            WHEN clm.DaysSinceLastPurchase <= 30 THEN 100
-            WHEN clm.DaysSinceLastPurchase <= 90 THEN 80
-            WHEN clm.DaysSinceLastPurchase <= 180 THEN 60
-            WHEN clm.DaysSinceLastPurchase <= 365 THEN 40
-            WHEN clm.DaysSinceLastPurchase <= 730 THEN 20
-            ELSE 0
-        END AS RecencyScore,
-        -- Frequency quintile (relative to other customers)
-        NTILE(5) OVER (ORDER BY clm.TotalOrders DESC) AS FrequencyQuintile,
-        -- Monetary quintile (relative to other customers)
-        NTILE(5) OVER (ORDER BY clm.LifetimeRevenue DESC) AS MonetaryQuintile
-    FROM CustomerLifetimeMetrics clm
-),
-
-CustomerValueScoring AS (
-    SELECT
-        cvm.*,
-        -- Comprehensive value score (0-100)
-        ROUND(
-            (cvm.MonetaryQuintile * 20) +  -- Revenue contribution (40%)
-            (cvm.FrequencyQuintile * 16) +  -- Purchase frequency (32%)
-            (cvm.RecencyScore * 0.20) +     -- Recency (20%)
-            (CASE WHEN cvm.LifetimeMarginPct > 30 THEN 8 ELSE cvm.LifetimeMarginPct * 0.267 END) -- Profitability (8%)
-        , 2) AS CustomerValueScore,
-        RANK() OVER (ORDER BY cvm.LifetimeRevenue DESC) AS RevenueRank,
-        RANK() OVER (ORDER BY cvm.LifetimeGrossProfit DESC) AS ProfitRank
-    FROM CustomerValueMetrics cvm
-),
-
-CustomerTiering AS (
-    SELECT
-        cvs.*,
-        CASE
-            WHEN cvs.CustomerValueScore >= 80 THEN 'Platinum'
-            WHEN cvs.CustomerValueScore >= 60 THEN 'Gold'
-            WHEN cvs.CustomerValueScore >= 40 THEN 'Silver'
-            ELSE 'Bronze'
-        END AS CustomerTier,
-        CASE
-            WHEN cvs.RevenueRank <= (SELECT COUNT(*) * 0.01 FROM CustomerValueScoring) THEN 'Top 1%'
-            WHEN cvs.RevenueRank <= (SELECT COUNT(*) * 0.05 FROM CustomerValueScoring) THEN 'Top 5%'
-            WHEN cvs.RevenueRank <= (SELECT COUNT(*) * 0.10 FROM CustomerValueScoring) THEN 'Top 10%'
-            WHEN cvs.RevenueRank <= (SELECT COUNT(*) * 0.25 FROM CustomerValueScoring) THEN 'Top 25%'
-            ELSE 'Below Top 25%'
-        END AS RevenuePercentile
-    FROM CustomerValueScoring cvs
-),
-
-DemographicByTier AS (
-    SELECT
-        ct.CustomerTier,
+        lsa.LifecycleStage,
         COUNT(*) AS CustomerCount,
-        ROUND(AVG(ct.YearlyIncome), 2) AS AvgYearlyIncome,
-        ROUND(AVG(ct.LifetimeRevenue), 2) AS AvgLifetimeRevenue,
-        ROUND(AVG(ct.LifetimeGrossProfit), 2) AS AvgLifetimeGrossProfit,
-        ROUND(AVG(ct.CustomerTenureYears), 2) AS AvgTenureYears,
-        ROUND(AVG(ct.TotalOrders), 2) AS AvgTotalOrders,
-        ROUND(AVG(ct.AvgOrderValue), 2) AS AvgOrderValue,
-        ROUND(AVG(ct.DaysSinceLastPurchase), 2) AS AvgDaysSinceLastPurchase,
-        ROUND(SUM(ct.LifetimeRevenue), 2) AS TotalTierRevenue,
-        ROUND(100.0 * SUM(ct.LifetimeRevenue) / (SELECT SUM(LifetimeRevenue) FROM CustomerTiering), 2) AS TierRevenueSharePct,
-        MODE(ct.Education) AS MostCommonEducation,
-        MODE(ct.Occupation) AS MostCommonOccupation
-    FROM CustomerTiering ct
-    GROUP BY ct.CustomerTier
+        ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM LifecycleStageAssignment), 2) AS StagePct,
+        ROUND(AVG(lsa.CustomerAgeYears), 2) AS AvgCustomerAgeYears,
+        ROUND(AVG(lsa.DaysSinceLastPurchase), 0) AS AvgDaysSinceLastPurchase,
+        ROUND(AVG(lsa.TotalOrders), 2) AS AvgTotalOrders,
+        ROUND(AVG(lsa.TotalRevenue), 2) AS AvgLifetimeRevenue,
+        ROUND(AVG(lsa.TotalGrossProfit), 2) AS AvgLifetimeProfit,
+        ROUND(AVG(lsa.AvgTransactionValue), 2) AS AvgTransactionValue,
+        ROUND(AVG(lsa.AvgDaysBetweenOrders), 0) AS AvgDaysBetweenOrders,
+        ROUND(SUM(lsa.TotalRevenue), 2) AS TotalStageRevenue,
+        ROUND(100.0 * SUM(lsa.TotalRevenue) / (SELECT SUM(TotalRevenue) FROM LifecycleStageAssignment), 2) AS RevenueSharePct,
+        ROUND(AVG(lsa.YearlyIncome), 2) AS AvgYearlyIncome
+    FROM LifecycleStageAssignment lsa
+    GROUP BY lsa.LifecycleStage
+),
+
+StageTransitionOpportunities AS (
+    SELECT
+        lsa.CustomerKey,
+        lsa.CustomerName,
+        lsa.LifecycleStage,
+        lsa.CustomerAgeYears,
+        lsa.DaysSinceLastPurchase,
+        lsa.TotalOrders,
+        lsa.TotalRevenue,
+        lsa.TotalGrossProfit,
+        lsa.AvgDaysBetweenOrders,
+        -- Next stage and requirements
+        CASE lsa.LifecycleStage
+            WHEN 'New' THEN 'Developing'
+            WHEN 'Developing' THEN 'Growing'
+            WHEN 'Growing' THEN 'Mature'
+            WHEN 'Mature' THEN 'Retain as Mature'
+            WHEN 'At-Risk' THEN 'Reactivate to Growing'
+            WHEN 'Churned' THEN 'Win Back to New'
+            WHEN 'Inactive' THEN 'Activate to Developing'
+        END AS NextTargetStage,
+        -- Gap to next stage
+        CASE lsa.LifecycleStage
+            WHEN 'New' THEN CONCAT(GREATEST(0, 3 - lsa.TotalOrders), ' more orders OR ', GREATEST(0, 91 - lsa.CustomerAgeDays), ' more days')
+            WHEN 'Developing' THEN CONCAT(GREATEST(0, 5 - lsa.TotalOrders), ' more orders needed for Growing stage')
+            WHEN 'Growing' THEN CONCAT(GREATEST(0, 11 - lsa.TotalOrders), ' more orders needed for Mature stage')
+            WHEN 'At-Risk' THEN CONCAT('Purchase within ', GREATEST(0, 180 - lsa.DaysSinceLastPurchase), ' days to avoid churn')
+            WHEN 'Churned' THEN 'Win-back campaign required'
+            ELSE 'N/A'
+        END AS StageProgressionGap,
+        -- Recommended action
+        CASE lsa.LifecycleStage
+            WHEN 'New' THEN 'Onboarding campaign: Product education, repeat purchase incentive'
+            WHEN 'Developing' THEN 'Engagement campaign: Cross-sell, loyalty program enrollment'
+            WHEN 'Growing' THEN 'Expansion campaign: Premium tiers, volume discounts'
+            WHEN 'Mature' THEN 'Retention campaign: VIP benefits, exclusive access'
+            WHEN 'At-Risk' THEN 'URGENT: Re-engagement campaign, win-back offer'
+            WHEN 'Churned' THEN 'Win-back campaign: Reactivation incentive'
+            WHEN 'Inactive' THEN 'Activation campaign: Limited-time promotion'
+        END AS RecommendedAction,
+        RANK() OVER (PARTITION BY lsa.LifecycleStage ORDER BY lsa.TotalRevenue DESC) AS StageRevenueRank
+    FROM LifecycleStageAssignment lsa
 )
 
 SELECT
-    ct.CustomerKey,
-    ct.CustomerName,
-    ct.CustomerTier,
-    ct.RevenuePercentile,
-    ct.CustomerValueScore,
-    ct.Country,
-    ct.State,
-    ct.SalesTerritoryRegion,
-    ct.YearlyIncome,
-    ct.Education,
-    ct.Occupation,
-    ct.Gender,
-    ct.MaritalStatus,
-    ct.FirstPurchaseDate,
-    ct.LastPurchaseDate,
-    ct.CustomerTenureYears,
-    ct.DaysSinceLastPurchase,
-    ct.TotalOrders,
-    ct.LifetimeRevenue,
-    ct.LifetimeGrossProfit,
-    ct.LifetimeMarginPct,
-    ct.AvgOrderValue,
-    ct.AvgLineItemValue,
-    ct.RevenuePerYear,
-    ct.ProfitPerYear,
-    ct.OrdersPerYear,
-    ct.AvgDaysBetweenOrders,
-    ct.TotalDiscounts,
-    ct.AvgDiscountPct,
-    ct.UniqueCategories,
-    ct.UniqueProducts,
-    ct.RecencyScore,
-    ct.FrequencyQuintile,
-    ct.MonetaryQuintile,
-    ct.RevenueRank,
-    ct.ProfitRank
-FROM CustomerTiering ct
-ORDER BY ct.CustomerValueScore DESC, ct.LifetimeRevenue DESC;
+    sto.CustomerKey,
+    sto.CustomerName,
+    sto.LifecycleStage,
+    sto.CustomerAgeYears,
+    sto.DaysSinceLastPurchase,
+    sto.TotalOrders,
+    sto.TotalRevenue,
+    sto.TotalGrossProfit,
+    sto.AvgDaysBetweenOrders,
+    sto.NextTargetStage,
+    sto.StageProgressionGap,
+    sto.RecommendedAction,
+    sto.StageRevenueRank,
+    CASE
+        WHEN sto.LifecycleStage = 'At-Risk' THEN 'High'
+        WHEN sto.LifecycleStage IN ('New', 'Developing') THEN 'Medium'
+        WHEN sto.LifecycleStage = 'Churned' THEN 'Low'
+        ELSE 'Stable'
+    END AS InterventionPriority
+FROM StageTransitionOpportunities sto
+ORDER BY
+    CASE sto.LifecycleStage
+        WHEN 'At-Risk' THEN 1
+        WHEN 'Mature' THEN 2
+        WHEN 'Growing' THEN 3
+        WHEN 'Developing' THEN 4
+        WHEN 'New' THEN 5
+        WHEN 'Inactive' THEN 6
+        WHEN 'Churned' THEN 7
+    END,
+    sto.TotalRevenue DESC;
 ```
 
 ## Task
@@ -1254,7 +1247,7 @@ ORDER BY ct.CustomerValueScore DESC, ct.LifetimeRevenue DESC;
   
 
 # Output
-the output should be put into a markdown file with name q-clv01.md in directory databases/adw-olap
+the output should be put into a markdown file with name q-clv03.md in directory databases/adw-olap
 it should have the following structure
 # KPI 1
 ## Definition

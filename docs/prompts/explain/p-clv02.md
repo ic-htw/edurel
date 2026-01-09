@@ -1062,186 +1062,195 @@ This is a classic **star/snowflake schema** for enterprise sales and financial a
 - **DimSalesReason** - Reason for purchase (many-to-many relationship)
 ## SQL Query
 ```sql
-WITH CustomerFirstLastPurchase AS (
+WITH CustomerPurchaseHistory AS (
     SELECT
         fis.CustomerKey,
         MIN(fis.OrderDate) AS FirstPurchaseDate,
         MAX(fis.OrderDate) AS LastPurchaseDate,
         COUNT(DISTINCT fis.SalesOrderNumber) AS TotalOrders,
-        COUNT(*) AS TotalLineItems,
-        (MAX(fis.OrderDate)::DATE - MIN(fis.OrderDate)::DATE) AS CustomerTenureDays
+        (CURRENT_DATE - MAX(fis.OrderDate)::DATE) AS DaysSinceLastPurchase,
+        (MAX(fis.OrderDate)::DATE - MIN(fis.OrderDate)::DATE) AS CustomerTenureDays,
+        ROUND(SUM(fis.SalesAmount), 2) AS TotalRevenue,
+        ROUND(SUM(fis.SalesAmount - fis.TotalProductCost), 2) AS TotalGrossProfit,
+        ROUND(AVG(fis.SalesAmount), 2) AS AvgTransactionValue
     FROM FactInternetSales fis
     GROUP BY fis.CustomerKey
 ),
 
-CustomerLifetimeMetrics AS (
+RFMScores AS (
     SELECT
-        fis.CustomerKey,
+        cph.CustomerKey,
         c.FirstName || ' ' || c.LastName AS CustomerName,
         c.YearlyIncome,
         c.EnglishEducation AS Education,
         c.EnglishOccupation AS Occupation,
-        c.Gender,
-        c.MaritalStatus,
-        c.TotalChildren,
-        c.NumberCarsOwned,
-        c.HouseOwnerFlag,
         g.EnglishCountryRegionName AS Country,
-        g.StateProvinceName AS State,
-        g.City,
         st.SalesTerritoryRegion,
-        cflp.FirstPurchaseDate,
-        cflp.LastPurchaseDate,
-        cflp.CustomerTenureDays,
-        ROUND(cflp.CustomerTenureDays / 365.25, 2) AS CustomerTenureYears,
-        (CURRENT_DATE - cflp.LastPurchaseDate::DATE) AS DaysSinceLastPurchase,
-        cflp.TotalOrders,
-        cflp.TotalLineItems,
-        COUNT(DISTINCT DATE(fis.OrderDate)) AS UniquePurchaseDays,
-        SUM(fis.OrderQuantity) AS TotalUnits,
-        ROUND(SUM(fis.SalesAmount), 2) AS LifetimeRevenue,
-        ROUND(SUM(fis.SalesAmount - fis.TotalProductCost), 2) AS LifetimeGrossProfit,
-        ROUND(100.0 * SUM(fis.SalesAmount - fis.TotalProductCost) / NULLIF(SUM(fis.SalesAmount), 0), 2) AS LifetimeMarginPct,
-        ROUND(AVG(fis.SalesAmount), 2) AS AvgLineItemValue,
-        ROUND(SUM(fis.SalesAmount) / NULLIF(cflp.TotalOrders, 0), 2) AS AvgOrderValue,
-        ROUND(SUM(fis.DiscountAmount), 2) AS TotalDiscounts,
-        ROUND(100.0 * SUM(fis.DiscountAmount) / NULLIF(SUM(fis.SalesAmount + fis.DiscountAmount), 0), 2) AS AvgDiscountPct,
-        COUNT(DISTINCT pc.EnglishProductCategoryName) AS UniqueCategories,
-        COUNT(DISTINCT fis.ProductKey) AS UniqueProducts
-    FROM FactInternetSales fis
-    INNER JOIN CustomerFirstLastPurchase cflp ON fis.CustomerKey = cflp.CustomerKey
-    INNER JOIN DimCustomer c ON fis.CustomerKey = c.CustomerKey
+        cph.FirstPurchaseDate,
+        cph.LastPurchaseDate,
+        cph.DaysSinceLastPurchase,
+        cph.CustomerTenureDays,
+        cph.TotalOrders,
+        cph.TotalRevenue,
+        cph.TotalGrossProfit,
+        cph.AvgTransactionValue,
+        -- Recency Score (1-5, 5 is best/most recent)
+        CASE
+            WHEN cph.DaysSinceLastPurchase <= 60 THEN 5
+            WHEN cph.DaysSinceLastPurchase <= 120 THEN 4
+            WHEN cph.DaysSinceLastPurchase <= 240 THEN 3
+            WHEN cph.DaysSinceLastPurchase <= 480 THEN 2
+            ELSE 1
+        END AS RecencyScore,
+        -- Frequency Score (1-5, 5 is best/most frequent)
+        NTILE(5) OVER (ORDER BY cph.TotalOrders ASC) AS FrequencyScore,
+        -- Monetary Score (1-5, 5 is best/highest value)
+        NTILE(5) OVER (ORDER BY cph.TotalRevenue ASC) AS MonetaryScore
+    FROM CustomerPurchaseHistory cph
+    INNER JOIN DimCustomer c ON cph.CustomerKey = c.CustomerKey
     INNER JOIN DimGeography g ON c.GeographyKey = g.GeographyKey
     INNER JOIN DimSalesTerritory st ON g.SalesTerritoryKey = st.SalesTerritoryKey
-    INNER JOIN DimProduct p ON fis.ProductKey = p.ProductKey
-    LEFT JOIN DimProductSubcategory psc ON p.ProductSubcategoryKey = psc.ProductSubcategoryKey
-    LEFT JOIN DimProductCategory pc ON psc.ProductCategoryKey = pc.ProductCategoryKey
-    GROUP BY fis.CustomerKey, c.FirstName, c.LastName, c.YearlyIncome, c.EnglishEducation,
-             c.EnglishOccupation, c.Gender, c.MaritalStatus, c.TotalChildren, c.NumberCarsOwned,
-             c.HouseOwnerFlag, g.EnglishCountryRegionName, g.StateProvinceName, g.City,
-             st.SalesTerritoryRegion, cflp.FirstPurchaseDate, cflp.LastPurchaseDate,
-             cflp.CustomerTenureDays, cflp.TotalOrders, cflp.TotalLineItems
 ),
 
-CustomerValueMetrics AS (
+RFMSegmentation AS (
     SELECT
-        clm.*,
-        -- Annualized metrics
-        ROUND(clm.LifetimeRevenue / NULLIF(clm.CustomerTenureYears, 0), 2) AS RevenuePerYear,
-        ROUND(clm.LifetimeGrossProfit / NULLIF(clm.CustomerTenureYears, 0), 2) AS ProfitPerYear,
-        ROUND(clm.TotalOrders / NULLIF(clm.CustomerTenureYears, 0), 2) AS OrdersPerYear,
-        -- Purchase frequency (days between orders)
-        ROUND(clm.CustomerTenureDays / NULLIF(clm.TotalOrders - 1, 0), 2) AS AvgDaysBetweenOrders,
-        -- Customer activity ratio (purchase days / tenure days)
-        ROUND(100.0 * clm.UniquePurchaseDays / NULLIF(clm.CustomerTenureDays, 0), 2) AS ActivityRatioPct,
-        -- Recency score (0-100, higher is better/more recent)
+        rfm.*,
+        -- Combined RFM score (concatenated for segment definition)
+        CAST(rfm.RecencyScore AS TEXT) || CAST(rfm.FrequencyScore AS TEXT) || CAST(rfm.MonetaryScore AS TEXT) AS RFMString,
+        -- Average RFM score
+        ROUND((rfm.RecencyScore + rfm.FrequencyScore + rfm.MonetaryScore) / 3.0, 2) AS AvgRFMScore,
+        -- Segment classification based on RFM patterns
         CASE
-            WHEN clm.DaysSinceLastPurchase <= 30 THEN 100
-            WHEN clm.DaysSinceLastPurchase <= 90 THEN 80
-            WHEN clm.DaysSinceLastPurchase <= 180 THEN 60
-            WHEN clm.DaysSinceLastPurchase <= 365 THEN 40
-            WHEN clm.DaysSinceLastPurchase <= 730 THEN 20
-            ELSE 0
-        END AS RecencyScore,
-        -- Frequency quintile (relative to other customers)
-        NTILE(5) OVER (ORDER BY clm.TotalOrders DESC) AS FrequencyQuintile,
-        -- Monetary quintile (relative to other customers)
-        NTILE(5) OVER (ORDER BY clm.LifetimeRevenue DESC) AS MonetaryQuintile
-    FROM CustomerLifetimeMetrics clm
+            -- Champions: High R, F, M
+            WHEN rfm.RecencyScore >= 4 AND rfm.FrequencyScore >= 4 AND rfm.MonetaryScore >= 4 THEN 'Champions'
+            -- Loyal Customers: High F, M but moderate R
+            WHEN rfm.FrequencyScore >= 4 AND rfm.MonetaryScore >= 4 AND rfm.RecencyScore >= 3 THEN 'Loyal Customers'
+            -- Potential Loyalists: Recent, moderate frequency and monetary
+            WHEN rfm.RecencyScore >= 4 AND rfm.FrequencyScore >= 3 AND rfm.MonetaryScore >= 3 THEN 'Potential Loyalists'
+            -- New Customers: High recency, low frequency
+            WHEN rfm.RecencyScore >= 4 AND rfm.FrequencyScore <= 2 THEN 'New Customers'
+            -- Promising: Recent, low-moderate F and M
+            WHEN rfm.RecencyScore >= 4 AND rfm.FrequencyScore <= 3 AND rfm.MonetaryScore <= 3 THEN 'Promising'
+            -- Need Attention: Moderate across board
+            WHEN rfm.RecencyScore = 3 AND rfm.FrequencyScore >= 3 AND rfm.MonetaryScore >= 3 THEN 'Need Attention'
+            -- About To Sleep: Declining recency, was active
+            WHEN rfm.RecencyScore = 2 AND rfm.FrequencyScore >= 3 AND rfm.MonetaryScore >= 3 THEN 'About To Sleep'
+            -- At Risk: Low recency, was valuable
+            WHEN rfm.RecencyScore <= 2 AND rfm.FrequencyScore >= 4 AND rfm.MonetaryScore >= 4 THEN 'At Risk'
+            -- Cannot Lose Them: Lowest recency, high historical value
+            WHEN rfm.RecencyScore = 1 AND rfm.FrequencyScore >= 4 AND rfm.MonetaryScore >= 4 THEN 'Cannot Lose Them'
+            -- Hibernating: Low recency, moderate F and M
+            WHEN rfm.RecencyScore <= 2 AND rfm.FrequencyScore <= 3 AND rfm.MonetaryScore <= 3 THEN 'Hibernating'
+            -- Lost: Lowest across all dimensions
+            WHEN rfm.RecencyScore = 1 AND rfm.FrequencyScore <= 2 AND rfm.MonetaryScore <= 2 THEN 'Lost'
+            ELSE 'Others'
+        END AS RFMSegment
+    FROM RFMScores rfm
 ),
 
-CustomerValueScoring AS (
+SegmentCharacteristics AS (
     SELECT
-        cvm.*,
-        -- Comprehensive value score (0-100)
-        ROUND(
-            (cvm.MonetaryQuintile * 20) +  -- Revenue contribution (40%)
-            (cvm.FrequencyQuintile * 16) +  -- Purchase frequency (32%)
-            (cvm.RecencyScore * 0.20) +     -- Recency (20%)
-            (CASE WHEN cvm.LifetimeMarginPct > 30 THEN 8 ELSE cvm.LifetimeMarginPct * 0.267 END) -- Profitability (8%)
-        , 2) AS CustomerValueScore,
-        RANK() OVER (ORDER BY cvm.LifetimeRevenue DESC) AS RevenueRank,
-        RANK() OVER (ORDER BY cvm.LifetimeGrossProfit DESC) AS ProfitRank
-    FROM CustomerValueMetrics cvm
-),
-
-CustomerTiering AS (
-    SELECT
-        cvs.*,
-        CASE
-            WHEN cvs.CustomerValueScore >= 80 THEN 'Platinum'
-            WHEN cvs.CustomerValueScore >= 60 THEN 'Gold'
-            WHEN cvs.CustomerValueScore >= 40 THEN 'Silver'
-            ELSE 'Bronze'
-        END AS CustomerTier,
-        CASE
-            WHEN cvs.RevenueRank <= (SELECT COUNT(*) * 0.01 FROM CustomerValueScoring) THEN 'Top 1%'
-            WHEN cvs.RevenueRank <= (SELECT COUNT(*) * 0.05 FROM CustomerValueScoring) THEN 'Top 5%'
-            WHEN cvs.RevenueRank <= (SELECT COUNT(*) * 0.10 FROM CustomerValueScoring) THEN 'Top 10%'
-            WHEN cvs.RevenueRank <= (SELECT COUNT(*) * 0.25 FROM CustomerValueScoring) THEN 'Top 25%'
-            ELSE 'Below Top 25%'
-        END AS RevenuePercentile
-    FROM CustomerValueScoring cvs
-),
-
-DemographicByTier AS (
-    SELECT
-        ct.CustomerTier,
+        rfms.RFMSegment,
         COUNT(*) AS CustomerCount,
-        ROUND(AVG(ct.YearlyIncome), 2) AS AvgYearlyIncome,
-        ROUND(AVG(ct.LifetimeRevenue), 2) AS AvgLifetimeRevenue,
-        ROUND(AVG(ct.LifetimeGrossProfit), 2) AS AvgLifetimeGrossProfit,
-        ROUND(AVG(ct.CustomerTenureYears), 2) AS AvgTenureYears,
-        ROUND(AVG(ct.TotalOrders), 2) AS AvgTotalOrders,
-        ROUND(AVG(ct.AvgOrderValue), 2) AS AvgOrderValue,
-        ROUND(AVG(ct.DaysSinceLastPurchase), 2) AS AvgDaysSinceLastPurchase,
-        ROUND(SUM(ct.LifetimeRevenue), 2) AS TotalTierRevenue,
-        ROUND(100.0 * SUM(ct.LifetimeRevenue) / (SELECT SUM(LifetimeRevenue) FROM CustomerTiering), 2) AS TierRevenueSharePct,
-        MODE(ct.Education) AS MostCommonEducation,
-        MODE(ct.Occupation) AS MostCommonOccupation
-    FROM CustomerTiering ct
-    GROUP BY ct.CustomerTier
+        ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM RFMSegmentation), 2) AS SegmentPct,
+        ROUND(AVG(rfms.RecencyScore), 2) AS AvgRecencyScore,
+        ROUND(AVG(rfms.FrequencyScore), 2) AS AvgFrequencyScore,
+        ROUND(AVG(rfms.MonetaryScore), 2) AS AvgMonetaryScore,
+        ROUND(AVG(rfms.DaysSinceLastPurchase), 0) AS AvgDaysSinceLastPurchase,
+        ROUND(AVG(rfms.TotalOrders), 2) AS AvgTotalOrders,
+        ROUND(AVG(rfms.TotalRevenue), 2) AS AvgLifetimeRevenue,
+        ROUND(AVG(rfms.TotalGrossProfit), 2) AS AvgLifetimeProfit,
+        ROUND(SUM(rfms.TotalRevenue), 2) AS TotalSegmentRevenue,
+        ROUND(100.0 * SUM(rfms.TotalRevenue) / (SELECT SUM(TotalRevenue) FROM RFMSegmentation), 2) AS RevenueSharePct,
+        ROUND(AVG(rfms.YearlyIncome), 2) AS AvgYearlyIncome,
+        MIN(rfms.TotalRevenue) AS MinLifetimeRevenue,
+        MAX(rfms.TotalRevenue) AS MaxLifetimeRevenue
+    FROM RFMSegmentation rfms
+    GROUP BY rfms.RFMSegment
+),
+
+MarketingRecommendations AS (
+    SELECT
+        rfms.CustomerKey,
+        rfms.CustomerName,
+        rfms.RFMSegment,
+        rfms.RecencyScore,
+        rfms.FrequencyScore,
+        rfms.MonetaryScore,
+        rfms.AvgRFMScore,
+        rfms.DaysSinceLastPurchase,
+        rfms.TotalOrders,
+        rfms.TotalRevenue,
+        rfms.TotalGrossProfit,
+        rfms.Country,
+        rfms.SalesTerritoryRegion,
+        rfms.YearlyIncome,
+        -- Marketing action recommendations
+        CASE
+            WHEN rfms.RFMSegment = 'Champions' THEN 'Reward with VIP benefits, early access, exclusive offers'
+            WHEN rfms.RFMSegment = 'Loyal Customers' THEN 'Upsell premium products, loyalty program, referral incentives'
+            WHEN rfms.RFMSegment = 'Potential Loyalists' THEN 'Nurture with membership offers, personalized recommendations'
+            WHEN rfms.RFMSegment = 'New Customers' THEN 'Onboarding campaigns, product education, welcome discounts'
+            WHEN rfms.RFMSegment = 'Promising' THEN 'Cross-sell campaigns, bundle offers, engagement emails'
+            WHEN rfms.RFMSegment = 'Need Attention' THEN 'Re-engagement campaigns, limited-time offers, feedback surveys'
+            WHEN rfms.RFMSegment = 'About To Sleep' THEN 'Win-back campaigns, personalized discounts, reminder emails'
+            WHEN rfms.RFMSegment = 'At Risk' THEN 'Urgent win-back offers, satisfaction surveys, retention discounts'
+            WHEN rfms.RFMSegment = 'Cannot Lose Them' THEN 'HIGH PRIORITY: Executive outreach, special recovery offers'
+            WHEN rfms.RFMSegment = 'Hibernating' THEN 'Low-cost reactivation, seasonal promotions, product updates'
+            WHEN rfms.RFMSegment = 'Lost' THEN 'Minimal investment, brand awareness only, or exclude from campaigns'
+            ELSE 'Standard marketing communications'
+        END AS MarketingAction,
+        -- Priority level
+        CASE
+            WHEN rfms.RFMSegment IN ('Champions', 'Loyal Customers', 'Cannot Lose Them') THEN 'High Priority'
+            WHEN rfms.RFMSegment IN ('Potential Loyalists', 'At Risk', 'Need Attention') THEN 'Medium Priority'
+            WHEN rfms.RFMSegment IN ('New Customers', 'Promising', 'About To Sleep') THEN 'Moderate Priority'
+            ELSE 'Low Priority'
+        END AS MarketingPriority,
+        -- Expected ROI category
+        CASE
+            WHEN rfms.RFMSegment IN ('Champions', 'Loyal Customers', 'Potential Loyalists') THEN 'High ROI Expected'
+            WHEN rfms.RFMSegment IN ('New Customers', 'Promising', 'At Risk', 'Cannot Lose Them') THEN 'Medium ROI Expected'
+            ELSE 'Low ROI Expected'
+        END AS ExpectedROI
+    FROM RFMSegmentation rfms
 )
 
 SELECT
-    ct.CustomerKey,
-    ct.CustomerName,
-    ct.CustomerTier,
-    ct.RevenuePercentile,
-    ct.CustomerValueScore,
-    ct.Country,
-    ct.State,
-    ct.SalesTerritoryRegion,
-    ct.YearlyIncome,
-    ct.Education,
-    ct.Occupation,
-    ct.Gender,
-    ct.MaritalStatus,
-    ct.FirstPurchaseDate,
-    ct.LastPurchaseDate,
-    ct.CustomerTenureYears,
-    ct.DaysSinceLastPurchase,
-    ct.TotalOrders,
-    ct.LifetimeRevenue,
-    ct.LifetimeGrossProfit,
-    ct.LifetimeMarginPct,
-    ct.AvgOrderValue,
-    ct.AvgLineItemValue,
-    ct.RevenuePerYear,
-    ct.ProfitPerYear,
-    ct.OrdersPerYear,
-    ct.AvgDaysBetweenOrders,
-    ct.TotalDiscounts,
-    ct.AvgDiscountPct,
-    ct.UniqueCategories,
-    ct.UniqueProducts,
-    ct.RecencyScore,
-    ct.FrequencyQuintile,
-    ct.MonetaryQuintile,
-    ct.RevenueRank,
-    ct.ProfitRank
-FROM CustomerTiering ct
-ORDER BY ct.CustomerValueScore DESC, ct.LifetimeRevenue DESC;
+    mr.CustomerKey,
+    mr.CustomerName,
+    mr.RFMSegment,
+    mr.RecencyScore,
+    mr.FrequencyScore,
+    mr.MonetaryScore,
+    mr.AvgRFMScore,
+    mr.DaysSinceLastPurchase,
+    mr.TotalOrders,
+    mr.TotalRevenue,
+    mr.TotalGrossProfit,
+    mr.Country,
+    mr.SalesTerritoryRegion,
+    mr.YearlyIncome,
+    mr.MarketingAction,
+    mr.MarketingPriority,
+    mr.ExpectedROI
+FROM MarketingRecommendations mr
+ORDER BY
+    CASE mr.RFMSegment
+        WHEN 'Champions' THEN 1
+        WHEN 'Loyal Customers' THEN 2
+        WHEN 'Cannot Lose Them' THEN 3
+        WHEN 'At Risk' THEN 4
+        WHEN 'Potential Loyalists' THEN 5
+        WHEN 'Need Attention' THEN 6
+        WHEN 'About To Sleep' THEN 7
+        WHEN 'New Customers' THEN 8
+        WHEN 'Promising' THEN 9
+        WHEN 'Hibernating' THEN 10
+        WHEN 'Lost' THEN 11
+        ELSE 12
+    END,
+    mr.TotalRevenue DESC;
 ```
 
 ## Task
@@ -1254,7 +1263,7 @@ ORDER BY ct.CustomerValueScore DESC, ct.LifetimeRevenue DESC;
   
 
 # Output
-the output should be put into a markdown file with name q-clv01.md in directory databases/adw-olap
+the output should be put into a markdown file with name q-clv02.md in directory databases/adw-olap
 it should have the following structure
 # KPI 1
 ## Definition
