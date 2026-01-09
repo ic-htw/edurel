@@ -1,0 +1,44 @@
+tables:
+- tablename: Genre
+  columns:
+  - columnname: GID
+    type: INTEGER
+  - columnname: Bezeichnung
+    type: VARCHAR
+  primary_key:
+  - GID
+- tablename: Playlist
+  columns:
+  - columnname: PLID
+    type: INTEGER
+  - columnname: Name
+    type: VARCHAR
+  - columnname: LetzterAbruf
+    type: DATE
+  primary_key:
+  - PLID
+- tablename: Stueck
+  columns:
+  - columnname: SID
+    type: INTEGER
+  - columnname: Titel
+    type: VARCHAR
+  - columnname: DauerInSek
+    type: INTEGER
+  - columnname: PLID
+    type: INTEGER
+  - columnname: GID
+    type: INTEGER
+  primary_key:
+  - SID
+  foreign_keys:
+  - sourcecolumns:
+    - PLID
+    targettable: Playlist
+    targetcolumns:
+    - PLID
+  - sourcecolumns:
+    - GID
+    targettable: Genre
+    targetcolumns:
+    - GID

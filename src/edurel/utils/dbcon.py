@@ -37,3 +37,19 @@ def foodmart():
     con = ddbu.con_file(f"{DB_DIR}/foodmart/foodmart.duckdb")
     return con
 
+def playlist_de():
+    DB_DIR = f"{os.getenv("BASE_DIR")}/databases"
+    con = ddbu.con_mem()
+    SQL_DIR = f"{DB_DIR}/playlist_de"
+    ddbu.exe_sql_file(con, f"{SQL_DIR}/schema.sql")
+    ddbu.exe_sql_file(con, f"{SQL_DIR}/data.sql")
+    return con
+
+def playlist_en():
+    DB_DIR = f"{os.getenv("BASE_DIR")}/databases"
+    con = ddbu.con_mem()
+    SQL_DIR = f"{DB_DIR}/playlist_en"
+    ddbu.exe_sql_file(con, f"{SQL_DIR}/schema.sql")
+    ddbu.exe_sql_file(con, f"{SQL_DIR}/data.sql")
+    return con
+
