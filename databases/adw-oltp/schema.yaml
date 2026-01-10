@@ -1,0 +1,1540 @@
+tables:
+- tablename: Address
+  columns:
+  - columnname: AddressID
+    type: INTEGER
+  - columnname: AddressLine1
+    type: VARCHAR
+  - columnname: AddressLine2
+    type: VARCHAR
+  - columnname: City
+    type: VARCHAR
+  - columnname: StateProvinceID
+    type: INTEGER
+  - columnname: PostalCode
+    type: VARCHAR
+  - columnname: SpatialLocation
+    type: VARCHAR
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - AddressID
+- tablename: AddressType
+  columns:
+  - columnname: AddressTypeID
+    type: INTEGER
+  - columnname: Name
+    type: VARCHAR
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - AddressTypeID
+- tablename: BillOfMaterials
+  columns:
+  - columnname: BillOfMaterialsID
+    type: INTEGER
+  - columnname: ProductAssemblyID
+    type: INTEGER
+  - columnname: ComponentID
+    type: INTEGER
+  - columnname: StartDate
+    type: TIMESTAMP
+  - columnname: EndDate
+    type: TIMESTAMP
+  - columnname: UnitMeasureCode
+    type: VARCHAR
+  - columnname: BOMLevel
+    type: SMALLINT
+  - columnname: PerAssemblyQty
+    type: DECIMAL(8,2)
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BillOfMaterialsID
+  foreign_keys:
+  - sourcecolumns:
+    - ProductAssemblyID
+    targettable: Product
+    targetcolumns:
+    - ProductID
+  - sourcecolumns:
+    - ComponentID
+    targettable: Product
+    targetcolumns:
+    - ProductID
+  - sourcecolumns:
+    - UnitMeasureCode
+    targettable: UnitMeasure
+    targetcolumns:
+    - UnitMeasureCode
+- tablename: BusinessEntity
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+- tablename: BusinessEntityAddress
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: AddressID
+    type: INTEGER
+  - columnname: AddressTypeID
+    type: INTEGER
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+  - AddressID
+  - AddressTypeID
+  foreign_keys:
+  - sourcecolumns:
+    - AddressID
+    targettable: Address
+    targetcolumns:
+    - AddressID
+  - sourcecolumns:
+    - AddressTypeID
+    targettable: AddressType
+    targetcolumns:
+    - AddressTypeID
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: BusinessEntity
+    targetcolumns:
+    - BusinessEntityID
+- tablename: BusinessEntityContact
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: PersonID
+    type: INTEGER
+  - columnname: ContactTypeID
+    type: INTEGER
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+  - PersonID
+  - ContactTypeID
+  foreign_keys:
+  - sourcecolumns:
+    - PersonID
+    targettable: Person
+    targetcolumns:
+    - BusinessEntityID
+  - sourcecolumns:
+    - ContactTypeID
+    targettable: ContactType
+    targetcolumns:
+    - ContactTypeID
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: BusinessEntity
+    targetcolumns:
+    - BusinessEntityID
+- tablename: ContactType
+  columns:
+  - columnname: ContactTypeID
+    type: INTEGER
+  - columnname: Name
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - ContactTypeID
+- tablename: CountryRegion
+  columns:
+  - columnname: CountryRegionCode
+    type: VARCHAR
+  - columnname: Name
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - CountryRegionCode
+- tablename: CountryRegionCurrency
+  columns:
+  - columnname: CountryRegionCode
+    type: VARCHAR
+  - columnname: CurrencyCode
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - CountryRegionCode
+  - CurrencyCode
+  foreign_keys:
+  - sourcecolumns:
+    - CountryRegionCode
+    targettable: CountryRegion
+    targetcolumns:
+    - CountryRegionCode
+  - sourcecolumns:
+    - CurrencyCode
+    targettable: Currency
+    targetcolumns:
+    - CurrencyCode
+- tablename: CreditCard
+  columns:
+  - columnname: CreditCardID
+    type: INTEGER
+  - columnname: CardType
+    type: VARCHAR
+  - columnname: CardNumber
+    type: VARCHAR
+  - columnname: ExpMonth
+    type: UTINYINT
+  - columnname: ExpYear
+    type: SMALLINT
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - CreditCardID
+- tablename: Culture
+  columns:
+  - columnname: CultureID
+    type: VARCHAR
+  - columnname: Name
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - CultureID
+- tablename: Currency
+  columns:
+  - columnname: CurrencyCode
+    type: VARCHAR
+  - columnname: Name
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - CurrencyCode
+- tablename: CurrencyRate
+  columns:
+  - columnname: CurrencyRateID
+    type: INTEGER
+  - columnname: CurrencyRateDate
+    type: TIMESTAMP
+  - columnname: FromCurrencyCode
+    type: VARCHAR
+  - columnname: ToCurrencyCode
+    type: VARCHAR
+  - columnname: AverageRate
+    type: DECIMAL(18,4)
+  - columnname: EndOfDayRate
+    type: DECIMAL(18,4)
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - CurrencyRateID
+  foreign_keys:
+  - sourcecolumns:
+    - FromCurrencyCode
+    targettable: Currency
+    targetcolumns:
+    - CurrencyCode
+  - sourcecolumns:
+    - ToCurrencyCode
+    targettable: Currency
+    targetcolumns:
+    - CurrencyCode
+- tablename: Customer
+  columns:
+  - columnname: CustomerID
+    type: INTEGER
+  - columnname: PersonID
+    type: INTEGER
+  - columnname: StoreID
+    type: INTEGER
+  - columnname: TerritoryID
+    type: INTEGER
+  - columnname: AccountNumber
+    type: VARCHAR
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - CustomerID
+  foreign_keys:
+  - sourcecolumns:
+    - PersonID
+    targettable: Person
+    targetcolumns:
+    - BusinessEntityID
+  - sourcecolumns:
+    - StoreID
+    targettable: Store
+    targetcolumns:
+    - BusinessEntityID
+  - sourcecolumns:
+    - TerritoryID
+    targettable: SalesTerritory
+    targetcolumns:
+    - TerritoryID
+- tablename: Department
+  columns:
+  - columnname: DepartmentID
+    type: SMALLINT
+  - columnname: Name
+    type: VARCHAR
+  - columnname: GroupName
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - DepartmentID
+- tablename: EmailAddress
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: EmailAddressID
+    type: INTEGER
+  - columnname: EmailAddress
+    type: VARCHAR
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+  - EmailAddressID
+  foreign_keys:
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: Person
+    targetcolumns:
+    - BusinessEntityID
+- tablename: Employee
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: NationalIDNumber
+    type: VARCHAR
+  - columnname: LoginID
+    type: VARCHAR
+  - columnname: OrganizationNode
+    type: VARCHAR
+  - columnname: OrganizationLevel
+    type: INTEGER
+  - columnname: JobTitle
+    type: VARCHAR
+  - columnname: BirthDate
+    type: DATE
+  - columnname: MaritalStatus
+    type: VARCHAR
+  - columnname: Gender
+    type: VARCHAR
+  - columnname: HireDate
+    type: DATE
+  - columnname: SalariedFlag
+    type: BIT
+  - columnname: VacationHours
+    type: SMALLINT
+  - columnname: SickLeaveHours
+    type: SMALLINT
+  - columnname: CurrentFlag
+    type: BIT
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+  foreign_keys:
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: Person
+    targetcolumns:
+    - BusinessEntityID
+- tablename: EmployeeDepartmentHistory
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: DepartmentID
+    type: SMALLINT
+  - columnname: ShiftID
+    type: UTINYINT
+  - columnname: StartDate
+    type: DATE
+  - columnname: EndDate
+    type: DATE
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+  - StartDate
+  - DepartmentID
+  - ShiftID
+  foreign_keys:
+  - sourcecolumns:
+    - DepartmentID
+    targettable: Department
+    targetcolumns:
+    - DepartmentID
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: Employee
+    targetcolumns:
+    - BusinessEntityID
+  - sourcecolumns:
+    - ShiftID
+    targettable: Shift
+    targetcolumns:
+    - ShiftID
+- tablename: EmployeePayHistory
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: RateChangeDate
+    type: TIMESTAMP
+  - columnname: Rate
+    type: DECIMAL(18,4)
+  - columnname: PayFrequency
+    type: UTINYINT
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+  - RateChangeDate
+  foreign_keys:
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: Employee
+    targetcolumns:
+    - BusinessEntityID
+- tablename: Location
+  columns:
+  - columnname: LocationID
+    type: SMALLINT
+  - columnname: Name
+    type: VARCHAR
+  - columnname: CostRate
+    type: DECIMAL(18,4)
+  - columnname: Availability
+    type: DECIMAL(8,2)
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - LocationID
+- tablename: Password
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: PasswordHash
+    type: VARCHAR
+  - columnname: PasswordSalt
+    type: VARCHAR
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+  foreign_keys:
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: Person
+    targetcolumns:
+    - BusinessEntityID
+- tablename: Person
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: PersonType
+    type: VARCHAR
+  - columnname: NameStyle
+    type: BIT
+  - columnname: Title
+    type: VARCHAR
+  - columnname: FirstName
+    type: VARCHAR
+  - columnname: MiddleName
+    type: VARCHAR
+  - columnname: LastName
+    type: VARCHAR
+  - columnname: Suffix
+    type: VARCHAR
+  - columnname: EmailPromotion
+    type: INTEGER
+  - columnname: AdditionalContactInfo
+    type: VARCHAR
+  - columnname: Demographics
+    type: VARCHAR
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+  foreign_keys:
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: BusinessEntity
+    targetcolumns:
+    - BusinessEntityID
+- tablename: PersonCreditCard
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: CreditCardID
+    type: INTEGER
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+  - CreditCardID
+  foreign_keys:
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: Person
+    targetcolumns:
+    - BusinessEntityID
+  - sourcecolumns:
+    - CreditCardID
+    targettable: CreditCard
+    targetcolumns:
+    - CreditCardID
+- tablename: PersonPhone
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: PhoneNumber
+    type: VARCHAR
+  - columnname: PhoneNumberTypeID
+    type: INTEGER
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+  - PhoneNumber
+  - PhoneNumberTypeID
+  foreign_keys:
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: Person
+    targetcolumns:
+    - BusinessEntityID
+  - sourcecolumns:
+    - PhoneNumberTypeID
+    targettable: PhoneNumberType
+    targetcolumns:
+    - PhoneNumberTypeID
+- tablename: PhoneNumberType
+  columns:
+  - columnname: PhoneNumberTypeID
+    type: INTEGER
+  - columnname: Name
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - PhoneNumberTypeID
+- tablename: Product
+  columns:
+  - columnname: ProductID
+    type: INTEGER
+  - columnname: Name
+    type: VARCHAR
+  - columnname: ProductNumber
+    type: VARCHAR
+  - columnname: MakeFlag
+    type: BIT
+  - columnname: FinishedGoodsFlag
+    type: BIT
+  - columnname: Color
+    type: VARCHAR
+  - columnname: SafetyStockLevel
+    type: SMALLINT
+  - columnname: ReorderPoint
+    type: SMALLINT
+  - columnname: StandardCost
+    type: DECIMAL(18,4)
+  - columnname: ListPrice
+    type: DECIMAL(18,4)
+  - columnname: Size
+    type: VARCHAR
+  - columnname: SizeUnitMeasureCode
+    type: VARCHAR
+  - columnname: WeightUnitMeasureCode
+    type: VARCHAR
+  - columnname: Weight
+    type: DECIMAL(8,2)
+  - columnname: DaysToManufacture
+    type: INTEGER
+  - columnname: ProductLine
+    type: VARCHAR
+  - columnname: Class
+    type: VARCHAR
+  - columnname: Style
+    type: VARCHAR
+  - columnname: ProductSubcategoryID
+    type: INTEGER
+  - columnname: ProductModelID
+    type: INTEGER
+  - columnname: SellStartDate
+    type: TIMESTAMP
+  - columnname: SellEndDate
+    type: TIMESTAMP
+  - columnname: DiscontinuedDate
+    type: TIMESTAMP
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - ProductID
+  foreign_keys:
+  - sourcecolumns:
+    - SizeUnitMeasureCode
+    targettable: UnitMeasure
+    targetcolumns:
+    - UnitMeasureCode
+  - sourcecolumns:
+    - WeightUnitMeasureCode
+    targettable: UnitMeasure
+    targetcolumns:
+    - UnitMeasureCode
+  - sourcecolumns:
+    - ProductModelID
+    targettable: ProductModel
+    targetcolumns:
+    - ProductModelID
+  - sourcecolumns:
+    - ProductSubcategoryID
+    targettable: ProductSubcategory
+    targetcolumns:
+    - ProductSubcategoryID
+- tablename: ProductCategory
+  columns:
+  - columnname: ProductCategoryID
+    type: INTEGER
+  - columnname: Name
+    type: VARCHAR
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - ProductCategoryID
+- tablename: ProductCostHistory
+  columns:
+  - columnname: ProductID
+    type: INTEGER
+  - columnname: StartDate
+    type: TIMESTAMP
+  - columnname: EndDate
+    type: TIMESTAMP
+  - columnname: StandardCost
+    type: DECIMAL(18,4)
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - ProductID
+  - StartDate
+  foreign_keys:
+  - sourcecolumns:
+    - ProductID
+    targettable: Product
+    targetcolumns:
+    - ProductID
+- tablename: ProductDescription
+  columns:
+  - columnname: ProductDescriptionID
+    type: INTEGER
+  - columnname: Description
+    type: VARCHAR
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - ProductDescriptionID
+- tablename: ProductInventory
+  columns:
+  - columnname: ProductID
+    type: INTEGER
+  - columnname: LocationID
+    type: SMALLINT
+  - columnname: Shelf
+    type: VARCHAR
+  - columnname: Bin
+    type: UTINYINT
+  - columnname: Quantity
+    type: SMALLINT
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - ProductID
+  - LocationID
+  foreign_keys:
+  - sourcecolumns:
+    - LocationID
+    targettable: Location
+    targetcolumns:
+    - LocationID
+  - sourcecolumns:
+    - ProductID
+    targettable: Product
+    targetcolumns:
+    - ProductID
+- tablename: ProductListPriceHistory
+  columns:
+  - columnname: ProductID
+    type: INTEGER
+  - columnname: StartDate
+    type: TIMESTAMP
+  - columnname: EndDate
+    type: TIMESTAMP
+  - columnname: ListPrice
+    type: DECIMAL(18,4)
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - ProductID
+  - StartDate
+  foreign_keys:
+  - sourcecolumns:
+    - ProductID
+    targettable: Product
+    targetcolumns:
+    - ProductID
+- tablename: ProductModel
+  columns:
+  - columnname: ProductModelID
+    type: INTEGER
+  - columnname: Name
+    type: VARCHAR
+  - columnname: CatalogDescription
+    type: VARCHAR
+  - columnname: Instructions
+    type: VARCHAR
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - ProductModelID
+- tablename: ProductModelProductDescriptionCulture
+  columns:
+  - columnname: ProductModelID
+    type: INTEGER
+  - columnname: ProductDescriptionID
+    type: INTEGER
+  - columnname: CultureID
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - ProductModelID
+  - ProductDescriptionID
+  - CultureID
+  foreign_keys:
+  - sourcecolumns:
+    - ProductDescriptionID
+    targettable: ProductDescription
+    targetcolumns:
+    - ProductDescriptionID
+  - sourcecolumns:
+    - CultureID
+    targettable: Culture
+    targetcolumns:
+    - CultureID
+  - sourcecolumns:
+    - ProductModelID
+    targettable: ProductModel
+    targetcolumns:
+    - ProductModelID
+- tablename: ProductSubcategory
+  columns:
+  - columnname: ProductSubcategoryID
+    type: INTEGER
+  - columnname: ProductCategoryID
+    type: INTEGER
+  - columnname: Name
+    type: VARCHAR
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - ProductSubcategoryID
+  foreign_keys:
+  - sourcecolumns:
+    - ProductCategoryID
+    targettable: ProductCategory
+    targetcolumns:
+    - ProductCategoryID
+- tablename: ProductVendor
+  columns:
+  - columnname: ProductID
+    type: INTEGER
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: AverageLeadTime
+    type: INTEGER
+  - columnname: StandardPrice
+    type: DECIMAL(18,4)
+  - columnname: LastReceiptCost
+    type: DECIMAL(18,4)
+  - columnname: LastReceiptDate
+    type: TIMESTAMP
+  - columnname: MinOrderQty
+    type: INTEGER
+  - columnname: MaxOrderQty
+    type: INTEGER
+  - columnname: OnOrderQty
+    type: INTEGER
+  - columnname: UnitMeasureCode
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - ProductID
+  - BusinessEntityID
+  foreign_keys:
+  - sourcecolumns:
+    - ProductID
+    targettable: Product
+    targetcolumns:
+    - ProductID
+  - sourcecolumns:
+    - UnitMeasureCode
+    targettable: UnitMeasure
+    targetcolumns:
+    - UnitMeasureCode
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: Vendor
+    targetcolumns:
+    - BusinessEntityID
+- tablename: PurchaseOrderDetail
+  columns:
+  - columnname: PurchaseOrderID
+    type: INTEGER
+  - columnname: PurchaseOrderDetailID
+    type: INTEGER
+  - columnname: DueDate
+    type: TIMESTAMP
+  - columnname: OrderQty
+    type: SMALLINT
+  - columnname: ProductID
+    type: INTEGER
+  - columnname: UnitPrice
+    type: DECIMAL(18,4)
+  - columnname: LineTotal
+    type: DECIMAL(18,4)
+  - columnname: ReceivedQty
+    type: DECIMAL(8,2)
+  - columnname: RejectedQty
+    type: DECIMAL(8,2)
+  - columnname: StockedQty
+    type: DECIMAL(8,2)
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - PurchaseOrderID
+  - PurchaseOrderDetailID
+  foreign_keys:
+  - sourcecolumns:
+    - ProductID
+    targettable: Product
+    targetcolumns:
+    - ProductID
+  - sourcecolumns:
+    - PurchaseOrderID
+    targettable: PurchaseOrderHeader
+    targetcolumns:
+    - PurchaseOrderID
+- tablename: PurchaseOrderHeader
+  columns:
+  - columnname: PurchaseOrderID
+    type: INTEGER
+  - columnname: RevisionNumber
+    type: UTINYINT
+  - columnname: Status
+    type: UTINYINT
+  - columnname: EmployeeID
+    type: INTEGER
+  - columnname: VendorID
+    type: INTEGER
+  - columnname: ShipMethodID
+    type: INTEGER
+  - columnname: OrderDate
+    type: TIMESTAMP
+  - columnname: ShipDate
+    type: TIMESTAMP
+  - columnname: SubTotal
+    type: DECIMAL(18,4)
+  - columnname: TaxAmt
+    type: DECIMAL(18,4)
+  - columnname: Freight
+    type: DECIMAL(18,4)
+  - columnname: TotalDue
+    type: DECIMAL(18,4)
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - PurchaseOrderID
+- tablename: SalesOrderDetail
+  columns:
+  - columnname: SalesOrderID
+    type: INTEGER
+  - columnname: SalesOrderDetailID
+    type: INTEGER
+  - columnname: CarrierTrackingNumber
+    type: VARCHAR
+  - columnname: OrderQty
+    type: SMALLINT
+  - columnname: ProductID
+    type: INTEGER
+  - columnname: SpecialOfferID
+    type: INTEGER
+  - columnname: UnitPrice
+    type: DECIMAL(18,4)
+  - columnname: UnitPriceDiscount
+    type: DECIMAL(18,4)
+  - columnname: LineTotal
+    type: DECIMAL(18,4)
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - SalesOrderID
+  - SalesOrderDetailID
+  foreign_keys:
+  - sourcecolumns:
+    - SalesOrderID
+    targettable: SalesOrderHeader
+    targetcolumns:
+    - SalesOrderID
+  - sourcecolumns:
+    - SpecialOfferID
+    - ProductID
+    targettable: SpecialOfferProduct
+    targetcolumns:
+    - SpecialOfferID
+    - ProductID
+- tablename: SalesOrderHeader
+  columns:
+  - columnname: SalesOrderID
+    type: INTEGER
+  - columnname: RevisionNumber
+    type: UTINYINT
+  - columnname: OrderDate
+    type: TIMESTAMP
+  - columnname: DueDate
+    type: TIMESTAMP
+  - columnname: ShipDate
+    type: TIMESTAMP
+  - columnname: Status
+    type: UTINYINT
+  - columnname: OnlineOrderFlag
+    type: BIT
+  - columnname: SalesOrderNumber
+    type: VARCHAR
+  - columnname: PurchaseOrderNumber
+    type: VARCHAR
+  - columnname: AccountNumber
+    type: VARCHAR
+  - columnname: CustomerID
+    type: INTEGER
+  - columnname: SalesPersonID
+    type: INTEGER
+  - columnname: TerritoryID
+    type: INTEGER
+  - columnname: BillToAddressID
+    type: INTEGER
+  - columnname: ShipToAddressID
+    type: INTEGER
+  - columnname: ShipMethodID
+    type: INTEGER
+  - columnname: CreditCardID
+    type: INTEGER
+  - columnname: CreditCardApprovalCode
+    type: VARCHAR
+  - columnname: CurrencyRateID
+    type: INTEGER
+  - columnname: SubTotal
+    type: DECIMAL(18,4)
+  - columnname: TaxAmt
+    type: DECIMAL(18,4)
+  - columnname: Freight
+    type: DECIMAL(18,4)
+  - columnname: TotalDue
+    type: DECIMAL(18,4)
+  - columnname: Comment
+    type: VARCHAR
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - SalesOrderID
+  foreign_keys:
+  - sourcecolumns:
+    - BillToAddressID
+    targettable: Address
+    targetcolumns:
+    - AddressID
+  - sourcecolumns:
+    - ShipToAddressID
+    targettable: Address
+    targetcolumns:
+    - AddressID
+  - sourcecolumns:
+    - CreditCardID
+    targettable: CreditCard
+    targetcolumns:
+    - CreditCardID
+  - sourcecolumns:
+    - CurrencyRateID
+    targettable: CurrencyRate
+    targetcolumns:
+    - CurrencyRateID
+  - sourcecolumns:
+    - CustomerID
+    targettable: Customer
+    targetcolumns:
+    - CustomerID
+  - sourcecolumns:
+    - SalesPersonID
+    targettable: SalesPerson
+    targetcolumns:
+    - BusinessEntityID
+  - sourcecolumns:
+    - ShipMethodID
+    targettable: ShipMethod
+    targetcolumns:
+    - ShipMethodID
+  - sourcecolumns:
+    - TerritoryID
+    targettable: SalesTerritory
+    targetcolumns:
+    - TerritoryID
+- tablename: SalesOrderHeaderSalesReason
+  columns:
+  - columnname: SalesOrderID
+    type: INTEGER
+  - columnname: SalesReasonID
+    type: INTEGER
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - SalesOrderID
+  - SalesReasonID
+  foreign_keys:
+  - sourcecolumns:
+    - SalesOrderID
+    targettable: SalesOrderHeader
+    targetcolumns:
+    - SalesOrderID
+  - sourcecolumns:
+    - SalesReasonID
+    targettable: SalesReason
+    targetcolumns:
+    - SalesReasonID
+- tablename: SalesPerson
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: TerritoryID
+    type: INTEGER
+  - columnname: SalesQuota
+    type: DECIMAL(18,4)
+  - columnname: Bonus
+    type: DECIMAL(18,4)
+  - columnname: CommissionPct
+    type: DECIMAL(18,4)
+  - columnname: SalesYTD
+    type: DECIMAL(18,4)
+  - columnname: SalesLastYear
+    type: DECIMAL(18,4)
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+  foreign_keys:
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: Employee
+    targetcolumns:
+    - BusinessEntityID
+  - sourcecolumns:
+    - TerritoryID
+    targettable: SalesTerritory
+    targetcolumns:
+    - TerritoryID
+- tablename: SalesPersonQuotaHistory
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: QuotaDate
+    type: TIMESTAMP
+  - columnname: SalesQuota
+    type: DECIMAL(18,4)
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+  - QuotaDate
+  foreign_keys:
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: SalesPerson
+    targetcolumns:
+    - BusinessEntityID
+- tablename: SalesReason
+  columns:
+  - columnname: SalesReasonID
+    type: INTEGER
+  - columnname: Name
+    type: VARCHAR
+  - columnname: ReasonType
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - SalesReasonID
+- tablename: SalesTaxRate
+  columns:
+  - columnname: SalesTaxRateID
+    type: INTEGER
+  - columnname: StateProvinceID
+    type: INTEGER
+  - columnname: TaxType
+    type: UTINYINT
+  - columnname: TaxRate
+    type: DECIMAL(8,4)
+  - columnname: Name
+    type: VARCHAR
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - SalesTaxRateID
+  foreign_keys:
+  - sourcecolumns:
+    - StateProvinceID
+    targettable: StateProvince
+    targetcolumns:
+    - StateProvinceID
+- tablename: SalesTerritory
+  columns:
+  - columnname: TerritoryID
+    type: INTEGER
+  - columnname: Name
+    type: VARCHAR
+  - columnname: CountryRegionCode
+    type: VARCHAR
+  - columnname: Grp
+    type: VARCHAR
+  - columnname: SalesYTD
+    type: DECIMAL(18,4)
+  - columnname: SalesLastYear
+    type: DECIMAL(18,4)
+  - columnname: CostYTD
+    type: DECIMAL(18,4)
+  - columnname: CostLastYear
+    type: DECIMAL(18,4)
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - TerritoryID
+  foreign_keys:
+  - sourcecolumns:
+    - CountryRegionCode
+    targettable: CountryRegion
+    targetcolumns:
+    - CountryRegionCode
+- tablename: SalesTerritoryHistory
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: TerritoryID
+    type: INTEGER
+  - columnname: StartDate
+    type: TIMESTAMP
+  - columnname: EndDate
+    type: TIMESTAMP
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+  - StartDate
+  - TerritoryID
+  foreign_keys:
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: SalesPerson
+    targetcolumns:
+    - BusinessEntityID
+  - sourcecolumns:
+    - TerritoryID
+    targettable: SalesTerritory
+    targetcolumns:
+    - TerritoryID
+- tablename: ScrapReason
+  columns:
+  - columnname: ScrapReasonID
+    type: SMALLINT
+  - columnname: Name
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - ScrapReasonID
+- tablename: Shift
+  columns:
+  - columnname: ShiftID
+    type: UTINYINT
+  - columnname: Name
+    type: VARCHAR
+  - columnname: StartTime
+    type: TIME
+  - columnname: EndTime
+    type: TIME
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - ShiftID
+- tablename: ShipMethod
+  columns:
+  - columnname: ShipMethodID
+    type: INTEGER
+  - columnname: Name
+    type: VARCHAR
+  - columnname: ShipBase
+    type: DECIMAL(18,4)
+  - columnname: ShipRate
+    type: DECIMAL(18,4)
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - ShipMethodID
+- tablename: ShoppingCartItem
+  columns:
+  - columnname: ShoppingCartItemID
+    type: INTEGER
+  - columnname: ShoppingCartID
+    type: VARCHAR
+  - columnname: Quantity
+    type: INTEGER
+  - columnname: ProductID
+    type: INTEGER
+  - columnname: DateCreated
+    type: TIMESTAMP
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - ShoppingCartItemID
+  foreign_keys:
+  - sourcecolumns:
+    - ProductID
+    targettable: Product
+    targetcolumns:
+    - ProductID
+- tablename: SpecialOffer
+  columns:
+  - columnname: SpecialOfferID
+    type: INTEGER
+  - columnname: Description
+    type: VARCHAR
+  - columnname: DiscountPct
+    type: DECIMAL(18,4)
+  - columnname: Type
+    type: VARCHAR
+  - columnname: Category
+    type: VARCHAR
+  - columnname: StartDate
+    type: TIMESTAMP
+  - columnname: EndDate
+    type: TIMESTAMP
+  - columnname: MinQty
+    type: INTEGER
+  - columnname: MaxQty
+    type: INTEGER
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - SpecialOfferID
+- tablename: SpecialOfferProduct
+  columns:
+  - columnname: SpecialOfferID
+    type: INTEGER
+  - columnname: ProductID
+    type: INTEGER
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - SpecialOfferID
+  - ProductID
+  foreign_keys:
+  - sourcecolumns:
+    - ProductID
+    targettable: Product
+    targetcolumns:
+    - ProductID
+  - sourcecolumns:
+    - SpecialOfferID
+    targettable: SpecialOffer
+    targetcolumns:
+    - SpecialOfferID
+- tablename: StateProvince
+  columns:
+  - columnname: StateProvinceID
+    type: INTEGER
+  - columnname: StateProvinceCode
+    type: VARCHAR
+  - columnname: CountryRegionCode
+    type: VARCHAR
+  - columnname: IsOnlyStateProvinceFlag
+    type: BIT
+  - columnname: Name
+    type: VARCHAR
+  - columnname: TerritoryID
+    type: INTEGER
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - StateProvinceID
+  foreign_keys:
+  - sourcecolumns:
+    - CountryRegionCode
+    targettable: CountryRegion
+    targetcolumns:
+    - CountryRegionCode
+  - sourcecolumns:
+    - TerritoryID
+    targettable: SalesTerritory
+    targetcolumns:
+    - TerritoryID
+- tablename: Store
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: Name
+    type: VARCHAR
+  - columnname: SalesPersonID
+    type: INTEGER
+  - columnname: Demographics
+    type: VARCHAR
+  - columnname: rowguid
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+  foreign_keys:
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: BusinessEntity
+    targetcolumns:
+    - BusinessEntityID
+  - sourcecolumns:
+    - SalesPersonID
+    targettable: SalesPerson
+    targetcolumns:
+    - BusinessEntityID
+- tablename: TransactionHistory
+  columns:
+  - columnname: TransactionID
+    type: INTEGER
+  - columnname: ProductID
+    type: INTEGER
+  - columnname: ReferenceOrderID
+    type: INTEGER
+  - columnname: ReferenceOrderLineID
+    type: INTEGER
+  - columnname: TransactionDate
+    type: TIMESTAMP
+  - columnname: TransactionType
+    type: VARCHAR
+  - columnname: Quantity
+    type: INTEGER
+  - columnname: ActualCost
+    type: DECIMAL(18,4)
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - TransactionID
+  foreign_keys:
+  - sourcecolumns:
+    - ProductID
+    targettable: Product
+    targetcolumns:
+    - ProductID
+- tablename: TransactionHistoryArchive
+  columns:
+  - columnname: TransactionID
+    type: INTEGER
+  - columnname: ProductID
+    type: INTEGER
+  - columnname: ReferenceOrderID
+    type: INTEGER
+  - columnname: ReferenceOrderLineID
+    type: INTEGER
+  - columnname: TransactionDate
+    type: TIMESTAMP
+  - columnname: TransactionType
+    type: VARCHAR
+  - columnname: Quantity
+    type: INTEGER
+  - columnname: ActualCost
+    type: DECIMAL(18,4)
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - TransactionID
+  foreign_keys:
+  - sourcecolumns:
+    - ProductID
+    targettable: Product
+    targetcolumns:
+    - ProductID
+- tablename: UnitMeasure
+  columns:
+  - columnname: UnitMeasureCode
+    type: VARCHAR
+  - columnname: Name
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - UnitMeasureCode
+- tablename: Vendor
+  columns:
+  - columnname: BusinessEntityID
+    type: INTEGER
+  - columnname: AccountNumber
+    type: VARCHAR
+  - columnname: Name
+    type: VARCHAR
+  - columnname: CreditRating
+    type: UTINYINT
+  - columnname: PreferredVendorStatus
+    type: BIT
+  - columnname: ActiveFlag
+    type: BIT
+  - columnname: PurchasingWebServiceURL
+    type: VARCHAR
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - BusinessEntityID
+  foreign_keys:
+  - sourcecolumns:
+    - BusinessEntityID
+    targettable: BusinessEntity
+    targetcolumns:
+    - BusinessEntityID
+- tablename: WorkOrder
+  columns:
+  - columnname: WorkOrderID
+    type: INTEGER
+  - columnname: ProductID
+    type: INTEGER
+  - columnname: OrderQty
+    type: INTEGER
+  - columnname: StockedQty
+    type: INTEGER
+  - columnname: ScrappedQty
+    type: SMALLINT
+  - columnname: StartDate
+    type: TIMESTAMP
+  - columnname: EndDate
+    type: TIMESTAMP
+  - columnname: DueDate
+    type: TIMESTAMP
+  - columnname: ScrapReasonID
+    type: SMALLINT
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - WorkOrderID
+  foreign_keys:
+  - sourcecolumns:
+    - ProductID
+    targettable: Product
+    targetcolumns:
+    - ProductID
+  - sourcecolumns:
+    - ScrapReasonID
+    targettable: ScrapReason
+    targetcolumns:
+    - ScrapReasonID
+- tablename: WorkOrderRouting
+  columns:
+  - columnname: WorkOrderID
+    type: INTEGER
+  - columnname: ProductID
+    type: INTEGER
+  - columnname: OperationSequence
+    type: SMALLINT
+  - columnname: LocationID
+    type: SMALLINT
+  - columnname: ScheduledStartDate
+    type: TIMESTAMP
+  - columnname: ScheduledEndDate
+    type: TIMESTAMP
+  - columnname: ActualStartDate
+    type: TIMESTAMP
+  - columnname: ActualEndDate
+    type: TIMESTAMP
+  - columnname: ActualResourceHrs
+    type: DECIMAL(9,4)
+  - columnname: PlannedCost
+    type: DECIMAL(18,4)
+  - columnname: ActualCost
+    type: DECIMAL(18,4)
+  - columnname: ModifiedDate
+    type: TIMESTAMP
+  primary_key:
+  - WorkOrderID
+  - ProductID
+  - OperationSequence
+  foreign_keys:
+  - sourcecolumns:
+    - LocationID
+    targettable: Location
+    targetcolumns:
+    - LocationID
+  - sourcecolumns:
+    - WorkOrderID
+    targettable: WorkOrder
+    targetcolumns:
+    - WorkOrderID

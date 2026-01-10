@@ -1,0 +1,324 @@
+tables:
+- tablename: DimAccount
+  columns:
+  - columnname: AccountKey
+    type: INTEGER
+  - columnname: AccountDescription
+    type: VARCHAR
+  - columnname: AccountType
+    type: VARCHAR
+  primary_key:
+  - AccountKey
+- tablename: DimCurrency
+  columns:
+  - columnname: CurrencyKey
+    type: INTEGER
+  - columnname: CurrencyName
+    type: VARCHAR
+  primary_key:
+  - CurrencyKey
+- tablename: DimCustomer
+  columns:
+  - columnname: CustomerKey
+    type: INTEGER
+  - columnname: GeographyKey
+    type: INTEGER
+  - columnname: FirstName
+    type: VARCHAR
+  - columnname: LastName
+    type: VARCHAR
+  - columnname: BirthDate
+    type: DATE
+  - columnname: MaritalStatus
+    type: VARCHAR
+  - columnname: Gender
+    type: VARCHAR
+  - columnname: YearlyIncome
+    type: DECIMAL(13,2)
+  - columnname: TotalChildren
+    type: INTEGER
+  - columnname: NumberChildrenAtHome
+    type: INTEGER
+  - columnname: EnglishEducation
+    type: VARCHAR
+  - columnname: EnglishOccupation
+    type: VARCHAR
+  - columnname: HouseOwnerFlag
+    type: VARCHAR
+  - columnname: NumberCarsOwned
+    type: INTEGER
+  primary_key:
+  - CustomerKey
+  foreign_keys:
+  - sourcecolumns:
+    - GeographyKey
+    targettable: DimGeography
+    targetcolumns:
+    - GeographyKey
+- tablename: DimDate
+  columns:
+  - columnname: DateKey
+    type: INTEGER
+  - columnname: DayNumberOfWeek
+    type: INTEGER
+  - columnname: EnglishDayNameOfWeek
+    type: VARCHAR
+  - columnname: DayNumberOfMonth
+    type: INTEGER
+  - columnname: DayNumberOfYear
+    type: INTEGER
+  - columnname: WeekNumberOfYear
+    type: INTEGER
+  - columnname: EnglishMonthName
+    type: VARCHAR
+  - columnname: MonthNumberOfYear
+    type: INTEGER
+  - columnname: CalendarQuarter
+    type: INTEGER
+  - columnname: CalendarYear
+    type: INTEGER
+  - columnname: CalendarSemester
+    type: INTEGER
+  primary_key:
+  - DateKey
+- tablename: DimDepartmentGroup
+  columns:
+  - columnname: DepartmentGroupKey
+    type: INTEGER
+  - columnname: DepartmentGroupName
+    type: VARCHAR
+  primary_key:
+  - DepartmentGroupKey
+- tablename: DimGeography
+  columns:
+  - columnname: GeographyKey
+    type: INTEGER
+  - columnname: City
+    type: VARCHAR
+  - columnname: StateProvinceCode
+    type: VARCHAR
+  - columnname: StateProvinceName
+    type: VARCHAR
+  - columnname: CountryRegionCode
+    type: VARCHAR
+  - columnname: EnglishCountryRegionName
+    type: VARCHAR
+  - columnname: PostalCode
+    type: VARCHAR
+  primary_key:
+  - GeographyKey
+- tablename: DimOrganization
+  columns:
+  - columnname: OrganizationKey
+    type: INTEGER
+  - columnname: OrganizationName
+    type: VARCHAR
+  - columnname: CurrencyKey
+    type: INTEGER
+  primary_key:
+  - OrganizationKey
+  foreign_keys:
+  - sourcecolumns:
+    - CurrencyKey
+    targettable: DimCurrency
+    targetcolumns:
+    - CurrencyKey
+- tablename: DimProduct
+  columns:
+  - columnname: ProductKey
+    type: INTEGER
+  - columnname: ProductSubcategoryKey
+    type: INTEGER
+  - columnname: EnglishProductName
+    type: VARCHAR
+  primary_key:
+  - ProductKey
+  foreign_keys:
+  - sourcecolumns:
+    - ProductSubcategoryKey
+    targettable: DimProductSubcategory
+    targetcolumns:
+    - ProductSubcategoryKey
+- tablename: DimProductCategory
+  columns:
+  - columnname: ProductCategoryKey
+    type: INTEGER
+  - columnname: EnglishProductCategoryName
+    type: VARCHAR
+  primary_key:
+  - ProductCategoryKey
+- tablename: DimProductSubcategory
+  columns:
+  - columnname: ProductSubcategoryKey
+    type: INTEGER
+  - columnname: EnglishProductSubcategoryName
+    type: VARCHAR
+  - columnname: ProductCategoryKey
+    type: INTEGER
+  primary_key:
+  - ProductSubcategoryKey
+  foreign_keys:
+  - sourcecolumns:
+    - ProductCategoryKey
+    targettable: DimProductCategory
+    targetcolumns:
+    - ProductCategoryKey
+- tablename: DimPromotion
+  columns:
+  - columnname: PromotionKey
+    type: INTEGER
+  - columnname: EnglishPromotionName
+    type: VARCHAR
+  - columnname: DiscountPct
+    type: FLOAT
+  - columnname: EnglishPromotionType
+    type: VARCHAR
+  - columnname: EnglishPromotionCategory
+    type: VARCHAR
+  - columnname: StartDate
+    type: TIMESTAMP
+  - columnname: EndDate
+    type: TIMESTAMP
+  - columnname: MinQty
+    type: INTEGER
+  - columnname: MaxQty
+    type: INTEGER
+  primary_key:
+  - PromotionKey
+- tablename: DimScenario
+  columns:
+  - columnname: ScenarioKey
+    type: INTEGER
+  - columnname: ScenarioName
+    type: VARCHAR
+  primary_key:
+  - ScenarioKey
+- tablename: FactFinance
+  columns:
+  - columnname: FinanceKey
+    type: INTEGER
+  - columnname: DateKey
+    type: INTEGER
+  - columnname: OrganizationKey
+    type: INTEGER
+  - columnname: DepartmentGroupKey
+    type: INTEGER
+  - columnname: ScenarioKey
+    type: INTEGER
+  - columnname: AccountKey
+    type: INTEGER
+  - columnname: Amount
+    type: FLOAT
+  foreign_keys:
+  - sourcecolumns:
+    - ScenarioKey
+    targettable: DimScenario
+    targetcolumns:
+    - ScenarioKey
+  - sourcecolumns:
+    - OrganizationKey
+    targettable: DimOrganization
+    targetcolumns:
+    - OrganizationKey
+  - sourcecolumns:
+    - DepartmentGroupKey
+    targettable: DimDepartmentGroup
+    targetcolumns:
+    - DepartmentGroupKey
+  - sourcecolumns:
+    - DateKey
+    targettable: DimDate
+    targetcolumns:
+    - DateKey
+  - sourcecolumns:
+    - AccountKey
+    targettable: DimAccount
+    targetcolumns:
+    - AccountKey
+- tablename: FactInternetSales
+  columns:
+  - columnname: ProductKey
+    type: INTEGER
+  - columnname: OrderDateKey
+    type: INTEGER
+  - columnname: DueDateKey
+    type: INTEGER
+  - columnname: ShipDateKey
+    type: INTEGER
+  - columnname: CustomerKey
+    type: INTEGER
+  - columnname: PromotionKey
+    type: INTEGER
+  - columnname: CurrencyKey
+    type: INTEGER
+  - columnname: SalesOrderNumber
+    type: VARCHAR
+  - columnname: SalesOrderLineNumber
+    type: INTEGER
+  - columnname: OrderQuantity
+    type: INTEGER
+  - columnname: UnitPrice
+    type: DECIMAL(13,2)
+  - columnname: SalesAmount
+    type: DECIMAL(13,2)
+  primary_key:
+  - SalesOrderNumber
+  - SalesOrderLineNumber
+  foreign_keys:
+  - sourcecolumns:
+    - CurrencyKey
+    targettable: DimCurrency
+    targetcolumns:
+    - CurrencyKey
+  - sourcecolumns:
+    - CustomerKey
+    targettable: DimCustomer
+    targetcolumns:
+    - CustomerKey
+  - sourcecolumns:
+    - OrderDateKey
+    targettable: DimDate
+    targetcolumns:
+    - DateKey
+  - sourcecolumns:
+    - DueDateKey
+    targettable: DimDate
+    targetcolumns:
+    - DateKey
+  - sourcecolumns:
+    - ShipDateKey
+    targettable: DimDate
+    targetcolumns:
+    - DateKey
+  - sourcecolumns:
+    - ProductKey
+    targettable: DimProduct
+    targetcolumns:
+    - ProductKey
+  - sourcecolumns:
+    - PromotionKey
+    targettable: DimPromotion
+    targetcolumns:
+    - PromotionKey
+- tablename: FactProductInventory
+  columns:
+  - columnname: ProductKey
+    type: INTEGER
+  - columnname: DateKey
+    type: INTEGER
+  - columnname: Quantity
+    type: INTEGER
+  primary_key:
+  - ProductKey
+  - DateKey
+  foreign_keys:
+  - sourcecolumns:
+    - DateKey
+    targettable: DimDate
+    targetcolumns:
+    - DateKey
+  - sourcecolumns:
+    - ProductKey
+    targettable: DimProduct
+    targetcolumns:
+    - ProductKey

@@ -35,6 +35,9 @@ def sql_df(con: duckdb.DuckDBPyConnection, sql: str) -> pd.DataFrame:
 # ---------------------------------------------------------------------------------------------
 # Connection utils
 # ---------------------------------------------------------------------------------------------
+def exe_sql(con: duckdb.DuckDBPyConnection, sql: str) -> None:
+    con.execute(sql)
+
 def exe_sql_file(con: duckdb.DuckDBPyConnection, sql_file_path: str) -> None:
     with open(sql_file_path, "r", encoding="utf-8") as f:
         sql = f.read()

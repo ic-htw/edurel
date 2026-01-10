@@ -6,6 +6,13 @@ def adw_olap():
     con = ddbu.con_file(f"{DB_DIR}/adw-olap/adw-olap.duckdb")
     return con
 
+def adw_olap_small():
+    DB_DIR = f"{os.getenv("BASE_DIR")}/databases"
+    con = ddbu.con_mem()
+    SQL_DIR = f"{DB_DIR}/adw-olap-small"
+    ddbu.exe_sql_file(con, f"{SQL_DIR}/schema.sql")
+    return con
+ 
 def adw_oltp():
     DB_DIR = f"{os.getenv("BASE_DIR")}/databases"
     con = ddbu.con_file(f"{DB_DIR}/adw-oltp/adw-oltp.duckdb")
