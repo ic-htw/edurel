@@ -1,40 +1,18 @@
-create table DimAccount(
-	AccountKey integer not null primary key,
-	AccountDescription varchar,
-	AccountType varchar
-);
-
 create table DimCurrency(
 	CurrencyKey integer not null primary key,
 	CurrencyName varchar
 );
 
-create table DimGeography(
-	GeographyKey integer not null primary key,
+create table DimCustomer(
+	CustomerKey integer not null primary key,
+	FirstName varchar,
+	LastName varchar,
 	City varchar,
 	StateProvinceCode varchar,
 	StateProvinceName varchar,
 	CountryRegionCode varchar,
 	EnglishCountryRegionName varchar,
 	PostalCode varchar
-);
-
-create table DimCustomer(
-	CustomerKey integer not null primary key,
-	GeographyKey integer,
-	FirstName varchar,
-	LastName varchar,
-	BirthDate date,
-	MaritalStatus varchar,
-	Gender varchar,
-	YearlyIncome decimal(13,2),
-	TotalChildren integer,
-	NumberChildrenAtHome integer,
-	EnglishEducation varchar,
-	EnglishOccupation varchar,
-	HouseOwnerFlag varchar,
-	NumberCarsOwned integer,
-  constraint FK_DimCustomer_DimGeography foreign key(GeographyKey) references DimGeography (GeographyKey)
 );
 
 create table DimDate(
@@ -51,39 +29,11 @@ create table DimDate(
 	CalendarSemester integer
 );
 
-
-create table DimDepartmentGroup(
-	DepartmentGroupKey integer not null primary key,
-	DepartmentGroupName varchar,
-);
-
-create table DimOrganization(
-	OrganizationKey integer not null primary key,
-	OrganizationName varchar,
-	CurrencyKey integer,
-  constraint FK_DimOrganization_DimCurrency foreign key (CurrencyKey) references DimCurrency (CurrencyKey)
-);
-
-
-create table DimProductCategory(
-	ProductCategoryKey integer not null primary key,
-	EnglishProductCategoryName varchar
-);
-
-
-create table DimProductSubcategory(
-	ProductSubcategoryKey integer not null primary key,
-	EnglishProductSubcategoryName varchar,
-	ProductCategoryKey integer,
-  constraint FK_DimProductSubcategory_DimProductCategory foreign key (ProductCategoryKey) references DimProductCategory (ProductCategoryKey)
-);
-
-
 create table DimProduct(
 	ProductKey integer not null primary key,
-	ProductSubcategoryKey integer,
 	EnglishProductName varchar,
-  constraint FK_DimProduct_DimProductSubcategory foreign key (ProductSubcategoryKey) references DimProductSubcategory (ProductSubcategoryKey)
+	EnglishProductSubcategoryName varchar,
+	EnglishProductCategoryName varchar
 );
 
 create table DimPromotion(
@@ -97,27 +47,6 @@ create table DimPromotion(
 	MinQty integer,
 	MaxQty integer
 );
-
-create table DimScenario(
-	ScenarioKey integer not null primary key,
-	ScenarioName varchar
-);
-
-create table FactFinance(
-	FinanceKey integer,
-	DateKey integer,
-	OrganizationKey integer,
-	DepartmentGroupKey integer,
-	ScenarioKey integer,
-	AccountKey integer,
-	Amount float,
-  constraint FK_FactFinance_DimScenario foreign key (ScenarioKey) references DimScenario (ScenarioKey),
-  constraint FK_FactFinance_DimOrganization foreign key (OrganizationKey) references DimOrganization (OrganizationKey),
-  constraint FK_FactFinance_DimDepartmentGroup foreign key (DepartmentGroupKey) references DimDepartmentGroup (DepartmentGroupKey),
-  constraint FK_FactFinance_DimDate foreign key (DateKey) references DimDate (DateKey),
-  constraint FK_FactFinance_DimAccount foreign key (AccountKey) references DimAccount (AccountKey)
-);
-
 
 create table FactInternetSales(
 	ProductKey integer,
@@ -141,8 +70,6 @@ create table FactInternetSales(
   constraint FK_FactInternetSales_DimProduct foreign key (ProductKey) references DimProduct (ProductKey),
   constraint FK_FactInternetSales_DimPromotion foreign key (PromotionKey) references DimPromotion (PromotionKey)
 );
-
-
 
 create table FactProductInventory(
 	ProductKey integer,
