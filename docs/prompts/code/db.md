@@ -55,3 +55,13 @@
   - implemention
     - execute SQL query in sql file on duckdb connection and print the result.
     - return nothing
+
+
+# extend python class DBHandler
+- add method schema_mermaid_png
+- save mermaid diagram as png file
+- based on schema_mermaid_png
+
+# modify schema_mermaid_png
+- for large er models in the png file, details can't be seen
+- provide means for larger images or higher resolution

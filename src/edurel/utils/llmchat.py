@@ -114,15 +114,21 @@ class LLMChat:
         """
         return self.messages.copy()
 
-    def show_conversation(self) -> str:
+    def show_conversation(self, lastn_only: Optional[int] = None) -> str:
         """
         Display the complete conversation chain with message type indicators.
+
+        Args:
+            lastn_only: If provided, show only the last n entries. If None, show all.
 
         Returns:
             A formatted string showing the conversation with types.
         """
         output = []
-        for i, msg in enumerate(self.messages):
+        messages_to_show = self.messages if lastn_only is None else self.messages[-lastn_only:]
+        start_index = 0 if lastn_only is None else max(0, len(self.messages) - lastn_only)
+
+        for i, msg in enumerate(messages_to_show, start=start_index):
             msg_type = self._get_message_type(msg)
             content = msg.content
             output.append(f"[{i}] {msg_type}:\n {content}")
