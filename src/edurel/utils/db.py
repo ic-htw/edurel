@@ -218,7 +218,10 @@ class DbHandler:
         Args:
             sql: SQL query to execute
         """
-        return duckdb_utils.sql_str(self.con, sql)
+        try: 
+            return duckdb_utils.sql_str(self.con, sql)
+        except Exception as e:
+            return f"err: {str(e)}"
 
     def sql_print(self, sql: str) -> None:
         """
@@ -238,4 +241,4 @@ class DbHandler:
         """
         with open(sql_file_path, "r", encoding="utf-8") as f:
             sql = f.read()
-        self.sql_out(sql)
+        self.sql_print(sql)

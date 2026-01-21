@@ -35,3 +35,11 @@ def sql_extract(text):
     return ""
 
 
+def md_sql(str):
+    return f"```sql\n{str}\n```"
+
+def md_yaml(str):
+    return f"```yaml\n{str}\n```"
+
+def md_plain(str):
+    return f"```plaintext\n{str}\n```"

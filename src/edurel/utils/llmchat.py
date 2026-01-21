@@ -21,6 +21,7 @@ from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
+import edurel.utils.misc as mu
 
 class MessagesState(TypedDict):
     """State schema for conversation messages."""
@@ -100,13 +101,16 @@ class LLMChat:
         user_msg = HumanMessage(content=message)
         self.messages.append(user_msg)
 
-        # Get AI response using the graph
-        result = self._graph.invoke({"messages": self.messages})
-        ai_response = result["messages"][-1]
+        try:
+            pass
+            # Get AI response using the graph
+            # result = self._graph.invoke({"messages": self.messages})
+        except Exception as e:
+            return f"err: {str(e)}"
 
-        # Add AI response to history
+        # ai_response = result["messages"][-1]
+        ai_response = AIMessage(content=mu.md_sql("select count(*) as cnt from dimxcustomer;"))  
         self.messages.append(ai_response)
-
         return ai_response.content
 
     def get_messages(self) -> List[BaseMessage]:
