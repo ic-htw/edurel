@@ -8,6 +8,16 @@ import pandas as pd
 # ---------------------------------------------------------------------------------------------
 # Query utils
 # ---------------------------------------------------------------------------------------------
+def sql_str(con: duckdb.DuckDBPyConnection, sql: str) -> None:
+    """
+    Execute SQL query and return the result.
+
+    Args:
+        con: DuckDB connection
+        sql: SQL query string to execute
+    """
+    return str(con.sql(sql))
+
 def sql_print(con: duckdb.DuckDBPyConnection, sql: str) -> None:
     """
     Execute SQL query and print the result.

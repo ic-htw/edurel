@@ -3,48 +3,54 @@ from pathlib import Path
 from typing import Optional, Dict, List, Any
 import ipywidgets as widgets
 from IPython.display import display, HTML
+import subprocess
+import tempfile
+import edurel.utils.yaml_utils as yu
 
+def schema_mermaid_png(
+        yaml_schema: str,
+        output_path: str,
+        omit_tags: Optional[List[str]] = None,
+        direction: str = "TB",
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        scale: float = 1.0
+    ) -> None:
 
-def schema_to_mermaid(schema: Dict[str, Any]) -> str:
-    """
-    Convert schema dictionary to Mermaid ER diagram syntax.
-    Args:
-        schema: Schema dictionary loaded from YAML
-    Returns:
-        Mermaid diagram code as string
-    """
-    lines = ["erDiagram"]
-    tables = schema.get('tables', [])
+        # Get Mermaid code
+        mermaid_code = yu.yaml_to_mermaid(yaml.safe_load(yaml_schema))
 
-    # Generate table definitions
-    for table in tables:
-        table_name = table['name']
-        columns = table.get('columns', [])
-        pk_cols = set(table.get('primary_key', []))
-        lines.append(f"    {table_name} {{")
-        for col in columns:
-            col_name = col['col']
-            col_type = col['type']
-            nullable = col.get('nullable', True)
-            # Add PK or NULL constraint markers
-            constraint = ""
-            if col_name in pk_cols:
-                constraint = " PK"
-            # elif not nullable:
-            #     constraint = " NOT_NULL"
-            lines.append(f"        {col_type} {col_name}{constraint}")
-        lines.append("    }")
+        # Create a temporary file for the Mermaid code
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.mmd', delete=False) as tmp_file:
+            tmp_file.write(mermaid_code)
+            tmp_mmd_path = tmp_file.name
 
-    # Generate relationships from foreign keys
-    for table in tables:
-        table_name = table['name']
-        foreign_keys = table.get('foreign_keys', [])
-        for fk in foreign_keys:
-            ref_table = fk['ref_table']
-            fk_cols = ', '.join(fk['columns'])
-            ref_cols = ', '.join(fk['ref_columns'])
-            # Mermaid relationship: many-to-one (orders to users)
-            # Format: SOURCE }o--|| TARGET : "relationship"
-            lines.append(f'    {table_name} }}o--|| {ref_table} : "{fk_cols} -> {ref_cols}"')
-    return "\n".join(lines)
+        try:
+            # Build mmdc command
+            cmd = ['mmdc', '-i', tmp_mmd_path, '-o', output_path]
+
+            # Add optional parameters
+            if width is not None:
+                cmd.extend(['-w', str(width)])
+            if height is not None:
+                cmd.extend(['-H', str(height)])
+            if scale != 1.0:
+                cmd.extend(['-s', str(scale)])
+
+            # Convert to PNG using mmdc (mermaid-cli)
+            try:
+                subprocess.run(
+                    cmd,
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
+            except FileNotFoundError:
+                raise FileNotFoundError(
+                    "mermaid-cli (mmdc) is not installed. "
+                    "Install it with: npm install -g @mermaid-js/mermaid-cli"
+                ) from None
+        finally:
+            # Clean up temporary file
+            Path(tmp_mmd_path).unlink(missing_ok=True)
 

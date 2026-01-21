@@ -5,6 +5,10 @@ This module provides a class for managing conversations with large language mode
 with support for conversation history tracking and manipulation.
 """
 
+import json
+import os
+from datetime import datetime
+from pathlib import Path
 from typing import List, Union, Optional, Sequence
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import (
@@ -245,6 +249,11 @@ class LLMChat:
         except (IndexError, TypeError):
             return False
 
+    def insert_message_at_end(
+        self, message: Union[str, BaseMessage], msg_type: str = "user"
+    ) -> bool:
+        self.insert_message(len(self.messages), message, msg_type)
+
     def replace_message(
         self, index: int, message: Union[str, BaseMessage], msg_type: str = "user"
     ) -> bool:
@@ -311,3 +320,44 @@ class LLMChat:
                 {"type": self._get_message_type(msg).lower(), "content": msg.content}
             )
         return exported
+
+    def log_conversation(
+        self, log_dir: str, l1: str, l2: str, l3: str, l4: str
+    ) -> str:
+        """
+        Log the conversation to a JSON file in a hierarchical directory structure.
+
+        Creates a four-level directory hierarchy and stores the conversation
+        as a JSON file with a timestamp-based filename.
+
+        Args:
+            log_dir: Root directory for the log file hierarchy.
+            l1: First level subdirectory name.
+            l2: Second level subdirectory name.
+            l3: Third level subdirectory name.
+            l4: Fourth level subdirectory name.
+
+        Returns:
+            The full path to the saved log file.
+
+        Example:
+            >>> chat.log_conversation("/logs", "project1", "session1", "user1", "v1")
+            # Creates: /logs/project1/session1/user1/v1/2026_01_21___14_30_45.json
+        """
+        # Build the full directory path
+        full_path = Path(log_dir) / l1 / l2 / l3 / l4
+
+        # Create directories if they don't exist
+        full_path.mkdir(parents=True, exist_ok=True)
+
+        # Generate timestamp-based filename
+        timestamp = datetime.now().strftime("%Y_%m_%d___%H_%M_%S")
+        filename = f"{timestamp}.json"
+        file_path = full_path / filename
+
+        # Export conversation and save to JSON
+        conversation_data = self.export_conversation()
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(conversation_data, f, indent=2, ensure_ascii=False)
+
+        return str(file_path)

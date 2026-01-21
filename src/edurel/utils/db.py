@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 from . import duckdb as duckdb_utils
-from . import yaml as yaml_utils
+from . import yaml_utils
 
 
 class DbHandler:
@@ -210,6 +210,15 @@ class DbHandler:
         with open(sql_file_path, "r", encoding="utf-8") as f:
             sql = f.read()
         return self.sql_df(sql)
+
+    def sql_str(self, sql: str) -> None:
+        """
+        Execute SQL query and return the result.
+
+        Args:
+            sql: SQL query to execute
+        """
+        return duckdb_utils.sql_str(self.con, sql)
 
     def sql_print(self, sql: str) -> None:
         """
