@@ -321,48 +321,6 @@ def df_print(con: duckdb.DuckDBPyConnection, spec: Optional[Dict[str, str]] = No
         print(f"Number of rows: {con.execute(sql).fetchone()[0]}")
         print("\n\n")
 
-def schema(con: duckdb.DuckDBPyConnection) -> str:
-    """
-    Generate a text representation of the database schema including foreign keys.
-
-    Args:
-        con: DuckDB connection
-
-    Returns:
-        String containing schema information with tables, columns, and foreign keys
-
-    Example:
-        >>> print(schema(con))
-        Table: users (id INTEGER NOT NULL, name VARCHAR NULL)
-        Table: orders (id INTEGER NOT NULL, user_id INTEGER NULL)
-        Foreign Key: orders(user_id) -> users(id)
-    """
-    tables = con.execute("SHOW TABLES").fetchall()
-    schema_str = ""
-    for (table_name,) in tables:
-        col_info = con.execute(f"DESCRIBE {table_name}").fetchall()
-        column_defs = ", ".join(
-            [
-                f"{col_name} {col_type} {'NOT NULL' if null_flag == 'NO' else 'NULL'}"
-                for col_name, col_type, null_flag, _, _, _ in col_info
-            ]
-        )
-        schema_str += f"Table: {table_name} ({column_defs})\n"
-
-    fks = con.execute(_SQL_FOREIGN_KEYS).fetchall()
-    for table_name_src, col_names_src, table_name_trg, col_names_trg in fks:
-        schema_str += f"Foreign Key: {table_name_src}({col_names_src}) -> {table_name_trg}({col_names_trg})\n"
-    return schema_str
-
-def schema_print(con: duckdb.DuckDBPyConnection) -> None:
-    """
-    Print database schema including tables, columns, and foreign keys.
-
-    Args:
-        con: DuckDB connection
-    """
-    schema_str = schema(con)
-    print(schema_str)
 
 def schema_yaml_print(con: duckdb.DuckDBPyConnection, additional_fks: Dict[str, List[str]]) -> None:
     """
@@ -375,6 +333,7 @@ def schema_yaml_print(con: duckdb.DuckDBPyConnection, additional_fks: Dict[str, 
     schema_dict = schema_yaml(con, additional_fks)
     yaml_string = yaml.dump(schema_dict, default_flow_style=False, sort_keys=False)
     print(yaml_string)
+
 
 # ---------------------------------------------------------------------------------------------
 # File conversion csv to parquet

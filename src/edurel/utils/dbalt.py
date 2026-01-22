@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from . import duckdb as duckdb_utils
+from . import duckdbalt as duckdb_utils
 from . import yaml_utils
 
 

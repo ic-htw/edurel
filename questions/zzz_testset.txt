@@ -1,0 +1,61 @@
+---db: company_en
+---tag: entry_year
+create a SQL query that outputs the following columns:
+- eid, lastname, hiredate from table employee
+- entry year per employee 
+sorted by eid
+
+---tag: entry_year_department_14
+create a SQL query that outputs the following columns:
+- eid, lastname, hiredate from table employee
+- entry year per employee 
+only for department 14
+sorted by eid
+
+---tag: hireyears_department_14
+create a SQL query that outputs the following columns:
+- eid, lastname, hiredate from table employee
+- number of years of deployment per employee 
+only for department 14
+sorted by eid
+
+---tag: employees_without_bonus
+create a SQL query that outputs the following columns:
+- lastname, salary, bonus from table employee
+only employees without bonus
+sorted by eid
+
+---tag: employees_with_bonus
+create a SQL query that outputs the following columns:
+- lastname, salary, bonus from table employee
+only employees with bonus
+sorted by eid
+
+---tag: total_income_per_employe_department_17
+create a SQL query that outputs the following columns:
+- eid, lastname, salary, bonus from table employee
+- total income per employee 
+only for department 17
+sorted by eid
+
+---tag: salary_band_per_employee
+create a SQL query that outputs the following columns:
+- eid, lastname, salary from table employee
+- salary band per employee 
+there are the following salary bands:
+- low <= 35000
+- medium > 35000
+- high > 100000
+sorted by salary
+
+---tag: employees_with_orgunit_name
+create a SQL query that outputs the following columns:
+- name from table orgunit with alias orgunit
+- eid, lastname from table employee
+sorted by orgunit, eid
+
+---tag: employees_per_project
+create a SQL query that outputs the following columns:
+- title from table project with alias project
+- eid, lastname from table employee
+sorted by title, eid

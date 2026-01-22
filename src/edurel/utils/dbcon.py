@@ -1,5 +1,5 @@
 import os
-import edurel.utils.duckdb as ddbu
+import edurel.utils.duckdbalt as ddbu
 
 def adw_olap():
     DB_DIR = f"{os.getenv("BASE_DIR")}/databases"
