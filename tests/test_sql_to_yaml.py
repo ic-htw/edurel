@@ -3,7 +3,7 @@
 import pytest
 from pathlib import Path
 import yaml
-from edurel.utils.sql_to_yaml import sql_to_yaml
+from edurel.zzz.sql_to_yaml import sql_to_yaml
 
 
 @pytest.fixture

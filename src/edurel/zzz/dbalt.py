@@ -10,8 +10,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from . import duckdbalt as duckdb_utils
-from . import yaml_utils
+from ..zzz import duckdbalt as duckdb_utils
+from ..zzz import yaml_utils
 
 
 class DbHandler:

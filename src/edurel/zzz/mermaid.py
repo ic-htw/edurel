@@ -5,7 +5,7 @@ import ipywidgets as widgets
 from IPython.display import display, HTML
 import subprocess
 import tempfile
-import edurel.utils.yaml_utils as yu
+import edurel.zzz.yaml_utils as yu
 
 def schema_mermaid_png(
         yaml_schema: str,

@@ -20,3 +20,73 @@
   - methods reduce and remove_tags should modify yaml_dict in place
   - adapt method yaml
   - add method yaml_base return yaml_base_dict as string
+
+- turn function yaml_to_mermaid in yaml_utils.py into a method of class SMan 
+- rename it to mermaid
+- it should use yaml_dict to generate mermaid code
+
+- turn function schema_mermaid_png in mermaid.py into a method of class SMan 
+- rename it to save_mermaid_png
+- it should use method mermaid from this class to generate the png file
+
+- add a method add_fks to class SMan
+- add fks to instance variable yaml_dict 
+- parameter of add_fks is spec
+- the string rep of the yaml looks as follows
+  ```yaml
+  tables:
+  - tablename: Employee
+    columns:
+    - columnname: EID
+      type: INTEGER
+      nullable: false
+    - columnname: OUID
+      type: INTEGER
+      nullable: false
+    - columnname: LastName
+      type: VARCHAR
+      nullable: false
+    - columnname: Hiredate
+      type: DATE
+      nullable: false
+    - columnname: Salary
+      type: DECIMAL(9,2)
+      nullable: false
+    - columnname: Bonus
+      type: DECIMAL(9,2)
+      nullable: true
+    primary_key:
+    - EID
+    foreign_keys:
+    - fkname: fk_Employee_OrgUnit_OUID_1
+      sourcecolumns:
+      - OUID
+      targettable: OrgUnit
+      targetcolumns:
+      - OUID
+  - tablename: OrgUnit
+    columns:
+    - columnname: OUID
+      type: INTEGER
+      nullable: false
+    - columnname: Head
+      type: INTEGER
+      nullable: true
+    - columnname: SuperUnit
+      type: INTEGER
+      nullable: true
+    - columnname: Name
+      type: VARCHAR
+      nullable: false
+    primary_key:
+    - OUID
+  ```
+  each table contains "foreign_keys" that have to be extended
+
+  - the spec to add fks looks as follows
+    - it is a string where each line descibes an fk in the following way
+    - name of source table | source col1, source col 2, ... |-->| target table | target col 1, target col 2 ...
+    - strip white spaces
+    - check structure of spec
+
+  - the fks have to be added to foreign_keys in the table with tablename "source table"

@@ -249,7 +249,50 @@ def schema_yaml(con: duckdb.DuckDBPyConnection, additional_fks: Dict[str, List[s
     return schema_dict
 
 
+def yaml(con: duckdb.DuckDBPyConnection) -> Dict[str, Any]:
+    """
+    Returns database schema as a dictionary suitable for YAML serialization.
 
+    Args:
+        con: DuckDB connection
+        aditional_fks: Dict of additional foreign keys to include in the schema
+     """
+
+    tables = tablenames(con)
+
+    schema_dict = {'tables': []}
+
+    for tablename in tables:
+        table_dict = {
+            'tablename': tablename,
+            'columns': columns(con, tablename)
+        }
+
+        pks = primary_keys(con, tablename)
+        if pks:
+            table_dict['primary_key'] = pks
+
+        fks = foreign_keys(con, tablename)
+        fks += [to_fk_dict(fk_str) for fk_str in additional_fks.get(tablename, [])]
+        if fks:
+            fk_list = []
+            for fk_ref in fks:
+                n = 1
+                # fk_ref is a dict like {'ref_table': [['src_cols'], ['trg_cols']]}
+                for ref_table, (src_cols, trg_cols) in fk_ref.items():
+                    fk_dict = {
+                        'fkname': f"fk_{tablename}_{ref_table}_{'_'.join(src_cols)}_{n}",
+                        'sourcecolumns': src_cols,
+                        'targettable': ref_table,
+                        'targetcolumns': trg_cols
+                    }
+                    fk_list.append(fk_dict)
+                n += 1
+            table_dict['foreign_keys'] = fk_list
+
+        schema_dict['tables'].append(table_dict)
+
+    return schema_dict
 
 
 # ---------------------------------------------------------------------------------------------

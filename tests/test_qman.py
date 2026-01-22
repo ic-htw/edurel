@@ -2,7 +2,7 @@
 
 import pytest
 from pathlib import Path
-from edurel.utils.qman import QMan
+from edurel.utils.question_man import QMan
 
 
 @pytest.fixture

@@ -2,7 +2,7 @@
 
 import pytest
 import yaml
-from edurel.utils.yaml_utils import yaml_to_yaml, _parse_index_spec
+from edurel.zzz.yaml_utils import yaml_to_yaml, _parse_index_spec
 
 
 # Sample schema for testing

@@ -1,7 +1,10 @@
 import re
 import yaml
 from fnmatch import fnmatch
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+import subprocess
+import tempfile
+from pathlib import Path
 
 
 class SMan:
@@ -57,6 +60,210 @@ class SMan:
             YAML string representation of yaml_base_dict
         """
         return yaml.dump(self.yaml_base_dict, default_flow_style=False, sort_keys=False)
+
+    def mermaid(self, direction: str = "TB") -> str:
+        """Convert yaml_dict to Mermaid ER diagram code.
+
+        Args:
+            direction: Diagram direction (TB, LR, RL, BT). Default is "TB" (top-to-bottom)
+
+        Returns:
+            String containing Mermaid ER diagram code
+
+        Example:
+            >>> sman = SMan(yaml_str)
+            >>> mermaid_code = sman.mermaid()
+            >>> mermaid_code = sman.mermaid(direction="LR")
+        """
+        lines = ["erDiagram"]
+        lines.append(f"    direction {direction}")
+        tables = self.yaml_dict.get("tables", [])
+
+        # Generate table definitions
+        for table in tables:
+            tablename = table["tablename"]
+            columns = table.get("columns", [])
+            pk_cols = set(table.get("primary_key", []))
+
+            lines.append(f"    {tablename} {{")
+            for col in columns:
+                columnname = col["columnname"]
+                col_type = col["type"]
+                # Remove size indicators like (9,2) or (255)
+                col_type = re.sub(r"\([^)]*\)", "", col_type)
+
+                # Add PK marker if column is in primary key
+                constraint = " PK" if columnname in pk_cols else ""
+                lines.append(f"        {col_type} {columnname}{constraint}")
+            lines.append("    }")
+
+        # Generate relationships from foreign keys
+        for table in tables:
+            tablename = table["tablename"]
+            foreign_keys = table.get("foreign_keys", [])
+            for fk in foreign_keys:
+                targettable = fk["targettable"]
+                sourcecolumns = ", ".join(fk["sourcecolumns"])
+                targetcolumns = ", ".join(fk["targetcolumns"])
+                # Mermaid relationship: many-to-one
+                lines.append(
+                    f'    {tablename} }}o--|| {targettable} : "{sourcecolumns} -> {targetcolumns}"'
+                )
+
+        return "\n".join(lines)
+
+    def save_mermaid_png(
+        self,
+        output_path: str,
+        direction: str = "TB",
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        scale: float = 1.0
+    ) -> None:
+        """Generate PNG file from yaml_dict schema using Mermaid CLI.
+
+        Args:
+            output_path: Path where the PNG file will be saved
+            direction: Diagram direction (TB, LR, RL, BT). Default is "TB"
+            width: Optional width in pixels
+            height: Optional height in pixels
+            scale: Scale factor for the output image. Default is 1.0
+
+        Raises:
+            FileNotFoundError: If mermaid-cli (mmdc) is not installed
+
+        Example:
+            >>> sman = SMan(yaml_str)
+            >>> sman.save_mermaid_png("schema.png")
+            >>> sman.save_mermaid_png("schema.png", direction="LR", width=1200, scale=2.0)
+
+        Note:
+            Requires mermaid-cli to be installed:
+            npm install -g @mermaid-js/mermaid-cli
+        """
+        # Get Mermaid code using the mermaid method
+        mermaid_code = self.mermaid(direction=direction)
+
+        # Create a temporary file for the Mermaid code
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.mmd', delete=False) as tmp_file:
+            tmp_file.write(mermaid_code)
+            tmp_mmd_path = tmp_file.name
+
+        try:
+            # Build mmdc command
+            cmd = ['mmdc', '-i', tmp_mmd_path, '-o', output_path]
+
+            # Add optional parameters
+            if width is not None:
+                cmd.extend(['-w', str(width)])
+            if height is not None:
+                cmd.extend(['-H', str(height)])
+            if scale != 1.0:
+                cmd.extend(['-s', str(scale)])
+
+            # Convert to PNG using mmdc (mermaid-cli)
+            try:
+                subprocess.run(
+                    cmd,
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
+            except FileNotFoundError:
+                raise FileNotFoundError(
+                    "mermaid-cli (mmdc) is not installed. "
+                    "Install it with: npm install -g @mermaid-js/mermaid-cli"
+                ) from None
+        finally:
+            # Clean up temporary file
+            Path(tmp_mmd_path).unlink(missing_ok=True)
+
+    def add_fks(self, spec: str) -> None:
+        """Add foreign keys to tables according to specification.
+
+        Args:
+            spec: Multi-line specification string with FK definitions
+
+        Side effects:
+            Modifies self.yaml_dict in place
+
+        Spec format:
+            Each line: source_table | source_col1, source_col2, ... |-->| target_table | target_col1, target_col2, ...
+
+        Example:
+            Employee | OUID |-->| OrgUnit | OUID
+            OrgUnit | Head |-->| Employee | EID
+        """
+        # Process each line of spec
+        for line in spec.strip().split('\n'):
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+
+            # Check for |-->| separator
+            if '|-->|' not in line:
+                raise ValueError(f"Invalid FK spec line (missing '|-->|'): {line}")
+
+            # Split by |-->|
+            parts = line.split('|-->|')
+            if len(parts) != 2:
+                raise ValueError(f"Invalid FK spec line (multiple '|-->|'): {line}")
+
+            source_part = parts[0].strip()
+            target_part = parts[1].strip()
+
+            # Parse source part: table | col1, col2, ...
+            source_tokens = [t.strip() for t in source_part.split('|')]
+            if len(source_tokens) != 2:
+                raise ValueError(f"Invalid source spec (expected 'table | cols'): {source_part}")
+
+            source_table = source_tokens[0]
+            source_cols = [c.strip() for c in source_tokens[1].split(',')]
+
+            # Parse target part: table | col1, col2, ...
+            target_tokens = [t.strip() for t in target_part.split('|')]
+            if len(target_tokens) != 2:
+                raise ValueError(f"Invalid target spec (expected 'table | cols'): {target_part}")
+
+            target_table = target_tokens[0]
+            target_cols = [c.strip() for c in target_tokens[1].split(',')]
+
+            # Validate column count match
+            if len(source_cols) != len(target_cols):
+                raise ValueError(
+                    f"Column count mismatch: source has {len(source_cols)}, target has {len(target_cols)}"
+                )
+
+            # Generate FK name
+            cols_suffix = '_'.join(source_cols)
+            fk_name = f"fk_{source_table}_{target_table}_{cols_suffix}_1"
+
+            # Find source table and add FK
+            if 'tables' not in self.yaml_dict:
+                raise ValueError("No tables found in schema")
+
+            table_found = False
+            for table in self.yaml_dict['tables']:
+                if table.get('tablename') == source_table:
+                    table_found = True
+
+                    # Initialize foreign_keys if not present
+                    if 'foreign_keys' not in table:
+                        table['foreign_keys'] = []
+
+                    # Create FK entry
+                    fk_entry = {
+                        'fkname': fk_name,
+                        'sourcecolumns': source_cols,
+                        'targettable': target_table,
+                        'targetcolumns': target_cols
+                    }
+
+                    table['foreign_keys'].append(fk_entry)
+                    break
+
+            if not table_found:
+                raise ValueError(f"Source table not found: {source_table}")
 
     def remove_tags(self, omit_tags: List[str]) -> None:
         """Remove specified tags (keys) from the YAML schema dictionary.
