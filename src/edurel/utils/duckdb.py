@@ -9,8 +9,9 @@ import yaml
 
 
 class Db:
-    def __init__(self, con: duckdb.DuckDBPyConnection):
+    def __init__(self, con: duckdb.DuckDBPyConnection, db_file_path: Optional[str] = None):
         self.con = con
+        self.db_file_path = db_file_path
 
     @classmethod
     def mem(cls) -> 'Db':
@@ -24,7 +25,7 @@ class Db:
             >>> db.exe("CREATE TABLE users (id INTEGER PRIMARY KEY);")
         """
         con = duckdb.connect(database=':memory:', read_only=False)
-        return cls(con)
+        return cls(con, db_file_path=None)
 
     @classmethod
     def file(cls, db_file_path: str, read_only: bool = True) -> 'Db':
@@ -42,7 +43,7 @@ class Db:
             >>> db = Db.file("my_database.duckdb", read_only=False)
         """
         con = duckdb.connect(database=str(db_file_path), read_only=read_only)
-        return cls(con)
+        return cls(con, db_file_path=str(db_file_path))
 
     def exe(self, sql: str) -> None:
         self.con.execute(sql)
@@ -80,6 +81,17 @@ class Db:
     def print_into_file(self, sql: str, sql_file_path: str) -> None:
         with open(sql_file_path, "w", encoding="utf-8") as f:
             f.write(self.eval(sql))
+
+    def dbname(self) -> Optional[str]:
+        """Extract database name (filename without suffix) from db_file_path.
+
+        Returns:
+            Database name (filename without extension) if db_file_path is set,
+            None for in-memory databases
+        """
+        if self.db_file_path is None:
+            return None
+        return Path(self.db_file_path).stem
 
     def tablenames(self) -> List[str]:
         """Get list of all table names in the database.

@@ -12,7 +12,7 @@ import ipywidgets as widgets
 from IPython.display import display
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
-from edurel.utils.conversation import LLMChat
+from edurel.utils.conversation import Conversation
 
 
 class ChatMan:
@@ -23,12 +23,12 @@ class ChatMan:
     and importing/exporting conversations to JSON files.
     """
 
-    def __init__(self, chat: LLMChat, chat_path: Optional[str] = None):
+    def __init__(self, chat: Conversation, chat_path: Optional[str] = None):
         """
         Initialize ChatMan widget.
 
         Args:
-            chat: An instance of LLMChat for managing the conversation.
+            chat: An instance of Conversation for managing the conversation.
             chat_path: Optional path to folder where chats should be stored.
         """
         self.chat = chat

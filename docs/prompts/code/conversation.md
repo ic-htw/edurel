@@ -29,7 +29,7 @@
 - the file names should be timestamps of the form yyyy_mm_dd___HH_MM_SS.json
 - if a directory does not exist, it should be created
 
-# rewrite class Conversation
+# rewrite conversation.py
 - provide an enum for clients with values ANTHROPIC, STATS, OLLAMA, OPENAI
 - provide a dict that turn client enum values into clients
 - turn the LLM name constants into an enum

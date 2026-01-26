@@ -1,4 +1,4 @@
-"""Tests for LLMChat class and log_conversation method."""
+"""Tests for Conversation class and log_conversation method."""
 
 import json
 import os
@@ -8,7 +8,7 @@ from unittest.mock import Mock
 import pytest
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
-from edurel.utils.conversation import LLMChat
+from edurel.utils.conversation import Conversation
 
 
 @pytest.fixture
@@ -23,8 +23,8 @@ def mock_model():
 
 @pytest.fixture
 def chat_instance(mock_model):
-    """Create an LLMChat instance with a mock model."""
-    return LLMChat(mock_model)
+    """Create an Conversation instance with a mock model."""
+    return Conversation(mock_model)
 
 
 @pytest.fixture
@@ -157,7 +157,7 @@ def test_log_conversation_creates_missing_directories(temp_log_dir):
     # Create a chat instance
     model = Mock()
     model.invoke.return_value = AIMessage(content="Response")
-    chat = LLMChat(model)
+    chat = Conversation(model)
 
     chat.set_system_prompt("Test")
 
@@ -217,7 +217,7 @@ def test_log_conversation_multiple_calls_create_different_files(chat_instance, t
 def test_log_conversation_empty_conversation(temp_log_dir):
     """Test logging an empty conversation."""
     model = Mock()
-    chat = LLMChat(model)
+    chat = Conversation(model)
 
     # Log empty conversation
     file_path = chat.log_conversation(

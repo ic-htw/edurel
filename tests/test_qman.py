@@ -1,19 +1,19 @@
-"""Tests for QMan question manager."""
+"""Tests for QuestionMan question manager."""
 
 import pytest
 from pathlib import Path
-from edurel.utils.question_man import QMan
+from edurel.utils.question_man import QuestionMan
 
 
 @pytest.fixture
 def qman():
-    """Create a QMan instance with the company_en.txt file."""
+    """Create a QuestionMan instance with the company_en.txt file."""
     qpath = Path(__file__).parent.parent / "questions" / "zzz_testset.txt"
-    return QMan(qpath)
+    return QuestionMan(qpath)
 
 
 def test_init(qman):
-    """Test that QMan initializes and parses the file correctly."""
+    """Test that QuestionMan initializes and parses the file correctly."""
     assert qman.dbname == "company_en"
     assert len(qman) > 0
 

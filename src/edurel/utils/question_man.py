@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import List, Tuple, Union
 
 
-class QMan:
+class QuestionMan:
     """Manager for question sets stored in text files.
 
     File format:

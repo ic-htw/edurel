@@ -7,7 +7,9 @@ with support for conversation history tracking and manipulation.
 
 import json
 import os
+from IPython.display import Markdown, display
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import List, Union, Optional, Sequence
 from langchain_core.language_models import BaseChatModel
@@ -18,14 +20,22 @@ from langchain_core.messages import (
     AIMessage,
 )
 from langgraph.graph import StateGraph, END
-from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_ollama import ChatOllama
 
-import edurel.utils.misc as mu
+# ---------------------------------------------------------------------------------------------
+# Client Enum
+# ---------------------------------------------------------------------------------------------
+class Client(Enum):
+    """Enum for supported LLM client types."""
+    ANTHROPIC = "anthropic"
+    STATS = "stats"
+    OLLAMA = "ollama"
+    OPENAI = "openai"
+
 
 # ---------------------------------------------------------------------------------------------
 # Chat Clients
@@ -67,28 +77,63 @@ def openai_client(model, timeout=60, max_retries=0, temperature=0):
         temperature=temperature,
     )
 
+
+# Client factory mapping
+CLIENT_FACTORIES = {
+    Client.ANTHROPIC: anthropic_client,
+    Client.STATS: stats_client,
+    Client.OLLAMA: ollama_client,
+    Client.OPENAI: openai_client,
+}
+
 # ---------------------------------------------------------------------------------------------
-# LLM Names
+# LLM Name Enum
 # ---------------------------------------------------------------------------------------------
-ARCTICTEXT2SQL = "a-kore/Arctic-Text2SQL-R1-7B"
-DEEPSEEK32 = "deepseek-chat"
-DEEPSEEK32THINKING = "deepseek-reasoner"
-DEEPSEEK32EXP = "deepseek-v3.2-exp"
-GEMINI25FLASH ="gemini-2.5-flash"
-GEMINI25PRO ="gemini-2.5-pro"
-GEMINI3PRO ="gemini-3-pro-preview"
-GEMINI3FLASH ="gemini-3-flash-preview"
-GLM46 = "glm-4.6"
-GLM47 = "glm-4.7"
-GPT41MINI = "gpt-4.1-mini-2025-04-14"
-GPT5 = "gpt-5-2025-08-07"
-GPT5MINI = "gpt-5-mini-2025-08-07"
-GROK4 = "grok-4"
-KIMIK2 = "kimi-k2-0905"
-OPUS41 = "claude-opus-4-1-20250805"
-OPUS45 = "claude-opus-4-5-20251101"
-SONNET4 ="claude-sonnet-4-20250514"
-SONNET45 ="claude-sonnet-4-5-20250929"
+class LLMName(Enum):
+    """Enum for supported LLM model names."""
+    ARCTICTEXT2SQL = "arctictext2sql"
+    DEEPSEEK32 = "deepseek32"
+    DEEPSEEK32THINKING = "deepseek32thinking"
+    DEEPSEEK32EXP = "deepseek32exp"
+    GEMINI25FLASH = "gemini25flash"
+    GEMINI25PRO = "gemini25pro"
+    GEMINI3PRO = "gemini3pro"
+    GEMINI3FLASH = "gemini3flash"
+    GLM46 = "glm46"
+    GLM47 = "glm47"
+    GPT41MINI = "gpt41mini"
+    GPT5 = "gpt5"
+    GPT5MINI = "gpt5mini"
+    GROK4 = "grok4"
+    KIMIK2 = "kimik2"
+    OPUS41 = "opus41"
+    OPUS45 = "opus45"
+    SONNET4 = "sonnet4"
+    SONNET45 = "sonnet45"
+
+
+# LLM name to model string mapping
+LLM_NAME_STRINGS = {
+    LLMName.ARCTICTEXT2SQL: "a-kore/Arctic-Text2SQL-R1-7B",
+    LLMName.DEEPSEEK32: "deepseek-chat",
+    LLMName.DEEPSEEK32THINKING: "deepseek-reasoner",
+    LLMName.DEEPSEEK32EXP: "deepseek-v3.2-exp",
+    LLMName.GEMINI25FLASH: "gemini-2.5-flash",
+    LLMName.GEMINI25PRO: "gemini-2.5-pro",
+    LLMName.GEMINI3PRO: "gemini-3-pro-preview",
+    LLMName.GEMINI3FLASH: "gemini-3-flash-preview",
+    LLMName.GLM46: "glm-4.6",
+    LLMName.GLM47: "glm-4.7",
+    LLMName.GPT41MINI: "gpt-4.1-mini-2025-04-14",
+    LLMName.GPT5: "gpt-5-2025-08-07",
+    LLMName.GPT5MINI: "gpt-5-mini-2025-08-07",
+    LLMName.GROK4: "grok-4",
+    LLMName.KIMIK2: "kimi-k2-0905",
+    LLMName.OPUS41: "claude-opus-4-1-20250805",
+    LLMName.OPUS45: "claude-opus-4-5-20251101",
+    LLMName.SONNET4: "claude-sonnet-4-20250514",
+    LLMName.SONNET45: "claude-sonnet-4-5-20250929",
+}
 
 # ---------------------------------------------------------------------------------------------
 # class MessagesState:
@@ -125,6 +170,42 @@ class Conversation:
         self.messages: List[BaseMessage] = []
         self._graph = None
         self._setup_graph()
+
+    @classmethod
+    def create(
+        cls,
+        client: Client,
+        llm_name: LLMName,
+        timeout: int = 60,
+        max_retries: int = 0,
+        temperature: float = 0,
+    ):
+        """
+        Factory method to create a Conversation instance.
+
+        Args:
+            client: Client enum value (e.g., Client.ANTHROPIC, Client.OPENAI).
+            llm_name: LLM name enum value (e.g., LLMName.SONNET45, LLMName.GPT5).
+            timeout: Timeout in seconds for API calls.
+            max_retries: Maximum number of retries for failed API calls.
+            temperature: Temperature setting for the model (0 = deterministic).
+
+        Returns:
+            A Conversation instance configured with the specified client and model.
+
+        Example:
+            >>> conv = Conversation.create(Client.ANTHROPIC, LLMName.SONNET45)
+            >>> conv.add_user_message("Hello!")
+        """
+        client_factory = CLIENT_FACTORIES[client]
+        model_string = LLM_NAME_STRINGS[llm_name]
+        model = client_factory(
+            model_string,
+            timeout=timeout,
+            max_retries=max_retries,
+            temperature=temperature,
+        )
+        return cls(model)
 
     def _setup_graph(self):
         """Set up the LangGraph conversation graph."""
@@ -192,27 +273,6 @@ class Conversation:
             List of all messages in the conversation.
         """
         return self.messages.copy()
-
-    def show_conversation(self, lastn_only: Optional[int] = None) -> str:
-        """
-        Display the complete conversation chain with message type indicators.
-
-        Args:
-            lastn_only: If provided, show only the last n entries. If None, show all.
-
-        Returns:
-            A formatted string showing the conversation with types.
-        """
-        output = []
-        messages_to_show = self.messages if lastn_only is None else self.messages[-lastn_only:]
-        start_index = 0 if lastn_only is None else max(0, len(self.messages) - lastn_only)
-
-        for i, msg in enumerate(messages_to_show, start=start_index):
-            msg_type = self._get_message_type(msg)
-            content = msg.content
-            output.append(f"[{i}] {msg_type}:\n {content}")
-
-        return "\n\n".join(output)
 
     def _get_message_type(self, message: BaseMessage) -> str:
         """Get the type label for a message."""
@@ -360,7 +420,7 @@ class Conversation:
         except IndexError:
             return False
 
-    def clear_conversation(self, keep_system: bool = True):
+    def clear(self, keep_system: bool = True):
         """
         Clear the conversation history.
 
@@ -373,7 +433,7 @@ class Conversation:
         else:
             self.messages = []
 
-    def get_conversation_length(self) -> int:
+    def len(self) -> int:
         """
         Get the number of messages in the conversation.
 
@@ -382,7 +442,28 @@ class Conversation:
         """
         return len(self.messages)
 
-    def export_conversation(self) -> List[dict]:
+    def md(self, lastn_only: Optional[int] = None) -> str:
+        """
+        Turn the conversation into a markdown-formatted string.
+
+        Args:
+            lastn_only: If provided, show only the last n entries. If None, show all.
+
+        Returns:
+            A formatted string showing the conversation with types.
+        """
+        output = []
+        messages_to_show = self.messages if lastn_only is None else self.messages[-lastn_only:]
+        start_index = 0 if lastn_only is None else max(0, len(self.messages) - lastn_only)
+
+        for i, msg in enumerate(messages_to_show, start=start_index):
+            msg_type = self._get_message_type(msg)
+            content = msg.content
+            output.append(f"[{i}] {msg_type}:\n {content}")
+
+        return "\n\n".join(output)
+
+    def data(self) -> List[dict]:
         """
         Export the conversation as a list of dictionaries.
 
@@ -396,7 +477,7 @@ class Conversation:
             )
         return exported
 
-    def log_conversation(
+    def log(
         self, log_dir: str, l1: str, l2: str, l3: str, l4: str
     ) -> str:
         """
@@ -431,8 +512,32 @@ class Conversation:
         file_path = full_path / filename
 
         # Export conversation and save to JSON
-        conversation_data = self.export_conversation()
+        conversation_data = self.data()
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(conversation_data, f, indent=2, ensure_ascii=False)
 
         return str(file_path)
+
+    def display(self, lastn_only: Optional[int] = None) -> None:
+        display(Markdown(self.md(lastn_only)))
+
+    # Backwards compatibility aliases
+    def log_conversation(self, log_dir: str, l1: str, l2: str, l3: str, l4: str) -> str:
+        """Alias for log() method for backwards compatibility."""
+        return self.log(log_dir, l1, l2, l3, l4)
+
+    def export_conversation(self) -> List[dict]:
+        """Alias for data() method for backwards compatibility."""
+        return self.data()
+
+    def clear_conversation(self, keep_system: bool = True):
+        """Alias for clear() method for backwards compatibility."""
+        return self.clear(keep_system)
+
+    def get_conversation_length(self) -> int:
+        """Alias for len() method for backwards compatibility."""
+        return self.len()
+
+    def show_conversation(self, lastn_only: Optional[int] = None) -> str:
+        """Alias for md() method for backwards compatibility."""
+        return self.md(lastn_only)
