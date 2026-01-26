@@ -13,16 +13,22 @@ class RelSchemaMan:
         self.yaml_base_dict = yaml.safe_load(yaml_str)
         self.yaml_dict = copy.deepcopy(self.yaml_base_dict)
 
-    def reduce(self, spec: str) -> None:
-        """Transform YAML schema input according to specification.
+    def transform(self, spec_file_path: str) -> None:
+        """Transform YAML schema input according to specification from YAML file.
 
         Args:
-            spec: Multi-line specification string with transformation steps
+            spec_file_path: Path to YAML file containing transformation steps
 
         Side effects:
             Modifies self.yaml_dict in place
 
-        Spec language:
+        YAML file format:
+            transformation_steps:
+            - del table pattern:<pattern>
+            - del table index:<index_spec>
+            - del column <table> pattern:<pattern>
+
+        Transformation language:
             del table pattern:<pattern>              - Delete tables matching pattern
             del table index:<index_spec>             - Delete tables by index
             del column <table> pattern:<pattern>     - Delete columns in table matching pattern
@@ -37,13 +43,29 @@ class RelSchemaMan:
             [1:5]       - Slice
             [::2]       - Slice with step
             [1:3,5:7]   - Multiple slices/indexes
+
+        Example:
+            >>> sman = RelSchemaMan(yaml_str)
+            >>> sman.transform("path/to/transforms.yaml")
         """
-        # Process each line of spec
-        for line in spec.strip().split('\n'):
-            line = line.strip()
-            if not line or line.startswith('#'):
+        # Read YAML file
+        with open(spec_file_path, 'r') as f:
+            transform_data = yaml.safe_load(f)
+
+        # Extract transformation_steps list
+        if not isinstance(transform_data, dict) or 'transformation_steps' not in transform_data:
+            raise ValueError(f"YAML file must contain 'transformation_steps' key with list of steps")
+
+        transformation_steps = transform_data['transformation_steps']
+        if not isinstance(transformation_steps, list):
+            raise ValueError(f"'transformation_steps' must be a list")
+
+        # Process each transformation step
+        for step in transformation_steps:
+            if not step or isinstance(step, str) and step.strip().startswith('#'):
                 continue
-            self.yaml_dict = self._apply_transformation(self.yaml_dict, line)
+            step = step.strip()
+            self.yaml_dict = self._apply_transformation(self.yaml_dict, step)
 
     def yaml(self) -> str:
         """Convert yaml_dict to YAML string format.
@@ -178,27 +200,43 @@ class RelSchemaMan:
             # Clean up temporary file
             Path(tmp_mmd_path).unlink(missing_ok=True)
 
-    def add_fks(self, spec: str) -> None:
-        """Add foreign keys to tables according to specification.
+    def add_fks(self, spec_file_path: str) -> None:
+        """Add foreign keys to tables according to specification from YAML file.
 
         Args:
-            spec: Multi-line specification string with FK definitions
-
+            spec_file_path: Path to YAML file containing FK definitions
         Side effects:
             Modifies self.yaml_dict in place
 
-        Spec format:
-            Each line: source_table | source_col1, source_col2, ... |-->| target_table | target_col1, target_col2, ...
+        YAML file format:
+            foreign_keys:
+            - OrgUnit|Head|-->|Employee|EID
+            - OrgUnit|SuperUnit|-->|OrgUnit|OEID
+
+        Each line format: source_table|source_cols|-->|target_table|target_cols
 
         Example:
-            Employee | OUID |-->| OrgUnit | OUID
-            OrgUnit | Head |-->| Employee | EID
+            >>> sman = RelSchemaMan(yaml_str)
+            >>> sman.add_fks("path/to/fks.yaml")
         """
-        # Process each line of spec
-        for line in spec.strip().split('\n'):
-            line = line.strip()
-            if not line or line.startswith('#'):
+        # Read YAML file
+        with open(spec_file_path, 'r') as f:
+            fk_data = yaml.safe_load(f)
+
+        # Extract foreign_keys list
+        if not isinstance(fk_data, dict) or 'foreign_keys' not in fk_data:
+            raise ValueError(f"YAML file must contain 'foreign_keys' key with list of FK specs")
+
+        fk_specs = fk_data['foreign_keys']
+        if not isinstance(fk_specs, list):
+            raise ValueError(f"'foreign_keys' must be a list")
+
+        # Process each FK spec
+        for line in fk_specs:
+            if not line or isinstance(line, str) and line.strip().startswith('#'):
                 continue
+
+            line = line.strip()
 
             # Check for |-->| separator
             if '|-->|' not in line:
@@ -265,22 +303,39 @@ class RelSchemaMan:
             if not table_found:
                 raise ValueError(f"Source table not found: {source_table}")
 
-    def remove_tags(self, omit_tags: List[str]) -> None:
+    def remove_tags(self, spec_file_path: str) -> None:
         """Remove specified tags (keys) from the YAML schema dictionary.
 
         Recursively traverses the data structure and removes any keys that match
         the tags in the omit_tags list.
 
         Args:
-            omit_tags: List of tag names (keys) to omit from the result
+            spec_file_path: Path to YAML file containing tag names to omit
 
         Side effects:
             Modifies self.yaml_dict in place
 
+        YAML file format:
+            omit_tags:
+            - nullable
+            - fkname
+
         Example:
-            >>> sman = SMan(yaml_str)
-            >>> sman.remove_tags(["id"])
+            >>> sman = RelSchemaMan(yaml_str)
+            >>> sman.remove_tags("path/to/tags.yaml")
         """
+        # Read YAML file
+        with open(spec_file_path, 'r') as f:
+            tags_data = yaml.safe_load(f)
+
+        # Extract omit_tags list
+        if not isinstance(tags_data, dict) or 'omit_tags' not in tags_data:
+            raise ValueError(f"YAML file must contain 'omit_tags' key with list of tags")
+
+        omit_tags = tags_data['omit_tags']
+        if not isinstance(omit_tags, list):
+            raise ValueError(f"'omit_tags' must be a list")
+
         self.yaml_dict = self._yaml_remove_tags_recursive(self.yaml_dict, omit_tags)
 
     def _yaml_remove_tags_recursive(self, data: Any, omit_tags: List[str]) -> Any:

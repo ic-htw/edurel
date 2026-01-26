@@ -29,58 +29,6 @@
 - rename it to save_mermaid_png
 - it should use method mermaid from this class to generate the png file
 
-- add a method add_fks to class SMan
-- add fks to instance variable yaml_dict 
-- parameter of add_fks is spec
-- the string rep of the yaml looks as follows
-  ```yaml
-  tables:
-  - tablename: Employee
-    columns:
-    - columnname: EID
-      type: INTEGER
-      nullable: false
-    - columnname: OUID
-      type: INTEGER
-      nullable: false
-    - columnname: LastName
-      type: VARCHAR
-      nullable: false
-    - columnname: Hiredate
-      type: DATE
-      nullable: false
-    - columnname: Salary
-      type: DECIMAL(9,2)
-      nullable: false
-    - columnname: Bonus
-      type: DECIMAL(9,2)
-      nullable: true
-    primary_key:
-    - EID
-    foreign_keys:
-    - fkname: fk_Employee_OrgUnit_OUID_1
-      sourcecolumns:
-      - OUID
-      targettable: OrgUnit
-      targetcolumns:
-      - OUID
-  - tablename: OrgUnit
-    columns:
-    - columnname: OUID
-      type: INTEGER
-      nullable: false
-    - columnname: Head
-      type: INTEGER
-      nullable: true
-    - columnname: SuperUnit
-      type: INTEGER
-      nullable: true
-    - columnname: Name
-      type: VARCHAR
-      nullable: false
-    primary_key:
-    - OUID
-  ```
   each table contains "foreign_keys" that have to be extended
 
   - the spec to add fks looks as follows
@@ -90,3 +38,32 @@
     - check structure of spec
 
   - the fks have to be added to foreign_keys in the table with tablename "source table"
+
+change method add_fks in class RelSchemaMan see rel_schema_man.py
+- change spec to a file path to a yaml file with the following structure
+  ```yaml
+  foreign_keys:
+  - OrgUnit|Head|-->|Employee|EID
+  - OrgUnit|SuperUnit|-->|OrgUnit|OEID
+  ```
+- each element of list foreign_keys contains a foreign key spec as before
+
+change method remove_tags in class RelSchemaMan see rel_schema_man.py
+- change omit_tags to a file path to a yaml file with the following structure
+  ```yaml
+  omit_tags:
+  - nullable
+  - fkname
+  ```
+- rename omit_tags to spec_file_path
+- list omit_tags can be used as before
+
+change method transform in class RelSchemaMan see rel_schema_man.py
+- change spec to a file path to a yaml file with the following structure
+  ```yaml
+  transformation_steps:
+  - step1
+  - step3
+  - step3
+  ```
+- each element of list transformation_steps contains a transformation as before

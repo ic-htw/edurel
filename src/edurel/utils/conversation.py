@@ -442,6 +442,20 @@ class Conversation:
         """
         return len(self.messages)
 
+    def data(self) -> List[dict]:
+        """
+        Export the conversation as a list of dictionaries.
+
+        Returns:
+            List of message dictionaries with 'type' and 'content' keys.
+        """
+        exported = []
+        for msg in self.messages:
+            exported.append(
+                {"type": self._get_message_type(msg).lower(), "content": msg.content}
+            )
+        return exported
+
     def md(self, lastn_only: Optional[int] = None) -> str:
         """
         Turn the conversation into a markdown-formatted string.
@@ -459,23 +473,9 @@ class Conversation:
         for i, msg in enumerate(messages_to_show, start=start_index):
             msg_type = self._get_message_type(msg)
             content = msg.content
-            output.append(f"[{i}] {msg_type}:\n {content}")
+            output.append(f"[{i}] {msg_type}:\n\n{content}")
 
         return "\n\n".join(output)
-
-    def data(self) -> List[dict]:
-        """
-        Export the conversation as a list of dictionaries.
-
-        Returns:
-            List of message dictionaries with 'type' and 'content' keys.
-        """
-        exported = []
-        for msg in self.messages:
-            exported.append(
-                {"type": self._get_message_type(msg).lower(), "content": msg.content}
-            )
-        return exported
 
     def log(
         self, log_dir: str, l1: str, l2: str, l3: str, l4: str
@@ -518,26 +518,72 @@ class Conversation:
 
         return str(file_path)
 
+    def load_from_log(
+        self, log_dir: str, l1: str, l2: str, l3: str, l4: str
+    ) -> bool:
+        """
+        Import conversation data from the most recent log file in a hierarchical directory.
+
+        Loads the conversation from the newest JSON file in the specified directory
+        structure (log_dir/l1/l2/l3/l4). Clears existing messages and replaces them
+        with the loaded conversation.
+
+        Args:
+            log_dir: Root directory for the log file hierarchy.
+            l1: First level subdirectory name.
+            l2: Second level subdirectory name.
+            l3: Third level subdirectory name.
+            l4: Fourth level subdirectory name.
+
+        Returns:
+            True if successfully loaded, False if no files found or error occurred.
+
+        Example:
+            >>> chat.load_from_log("/logs", "project1", "session1", "user1", "v1")
+            True
+        """
+        # Build the full directory path
+        full_path = Path(log_dir) / l1 / l2 / l3 / l4
+
+        # Check if directory exists
+        if not full_path.exists() or not full_path.is_dir():
+            return False
+
+        # Find all JSON files in the directory
+        json_files = list(full_path.glob("*.json"))
+
+        if not json_files:
+            return False
+
+        # Sort by filename (timestamp-based) and get the newest
+        newest_file = sorted(json_files)[-1]
+
+        try:
+            # Load the JSON data
+            with open(newest_file, "r", encoding="utf-8") as f:
+                conversation_data = json.load(f)
+
+            # Clear current messages
+            self.messages = []
+
+            # Reconstruct messages from the data
+            for msg_dict in conversation_data:
+                msg_type = msg_dict.get("type", "").lower()
+                content = msg_dict.get("content", "")
+
+                if msg_type == "system":
+                    self.messages.append(SystemMessage(content=content))
+                elif msg_type == "user":
+                    self.messages.append(HumanMessage(content=content))
+                elif msg_type == "ai":
+                    self.messages.append(AIMessage(content=content))
+
+            return True
+
+        except (json.JSONDecodeError, IOError, KeyError):
+            return False
+
     def display(self, lastn_only: Optional[int] = None) -> None:
         display(Markdown(self.md(lastn_only)))
 
-    # Backwards compatibility aliases
-    def log_conversation(self, log_dir: str, l1: str, l2: str, l3: str, l4: str) -> str:
-        """Alias for log() method for backwards compatibility."""
-        return self.log(log_dir, l1, l2, l3, l4)
-
-    def export_conversation(self) -> List[dict]:
-        """Alias for data() method for backwards compatibility."""
-        return self.data()
-
-    def clear_conversation(self, keep_system: bool = True):
-        """Alias for clear() method for backwards compatibility."""
-        return self.clear(keep_system)
-
-    def get_conversation_length(self) -> int:
-        """Alias for len() method for backwards compatibility."""
-        return self.len()
-
-    def show_conversation(self, lastn_only: Optional[int] = None) -> str:
-        """Alias for md() method for backwards compatibility."""
-        return self.md(lastn_only)
+    

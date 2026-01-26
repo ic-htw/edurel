@@ -1,3 +1,4 @@
+from logging import config
 from typing import Dict, List, Any, Optional
 import duckdb
 import pandas as pd
@@ -9,12 +10,19 @@ import yaml
 
 
 class Db:
-    def __init__(self, con: duckdb.DuckDBPyConnection, db_file_path: Optional[str] = None):
+    def __init__(self, con: duckdb.DuckDBPyConnection, db_file_path: Optional[str] = None, db_name: Optional[str] = None):
         self.con = con
         self.db_file_path = db_file_path
 
+        if self.db_file_path:
+            self.name = Path(self.db_file_path).stem
+        elif db_name:
+            self.name = db_name
+        else:
+            raise ValueError("Either db_file_path or db_name must be provided")
+
     @classmethod
-    def mem(cls) -> 'Db':
+    def mem(cls, db_name: Optional[str] = None) -> 'Db':
         """Create Db instance with in-memory DuckDB connection.
 
         Returns:
@@ -25,7 +33,9 @@ class Db:
             >>> db.exe("CREATE TABLE users (id INTEGER PRIMARY KEY);")
         """
         con = duckdb.connect(database=':memory:', read_only=False)
-        return cls(con, db_file_path=None)
+        if not db_name:
+            db_name = "dummy_db"
+        return cls(con, db_file_path=None, db_name=db_name)
 
     @classmethod
     def file(cls, db_file_path: str, read_only: bool = True) -> 'Db':
@@ -52,6 +62,13 @@ class Db:
         with open(sql_file_path, "r", encoding="utf-8") as f:
             sql = f.read()
             self.con.execute(sql)
+
+    def config_exe(self, yaml_file_path: str) -> None:
+        with open(yaml_file_path, "r", encoding="utf-8") as f:
+            yaml_content = f.read()
+            config = yaml.safe_load(yaml_content)
+        for sql_file in config['sql_code_files']:
+            self.file_exe(sql_file)
 
     def eval(self, sql: str) -> str:
         return str(self.con.sql(sql))
@@ -81,17 +98,6 @@ class Db:
     def print_into_file(self, sql: str, sql_file_path: str) -> None:
         with open(sql_file_path, "w", encoding="utf-8") as f:
             f.write(self.eval(sql))
-
-    def dbname(self) -> Optional[str]:
-        """Extract database name (filename without suffix) from db_file_path.
-
-        Returns:
-            Database name (filename without extension) if db_file_path is set,
-            None for in-memory databases
-        """
-        if self.db_file_path is None:
-            return None
-        return Path(self.db_file_path).stem
 
     def tablenames(self) -> List[str]:
         """Get list of all table names in the database.

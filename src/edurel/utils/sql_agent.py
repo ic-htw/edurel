@@ -22,9 +22,9 @@ class SQLAgent:
         client: Client,
         llm_name: LLMName,
         system_prompt: Optional[str] = None,
-        reduce_spec: Optional[str] = None,
-        fk_spec: Optional[str] = None,
-        rem_tags_spec: Optional[List[str]] = None,
+        transform_spec_file_path: Optional[str] = None,
+        fk_spec_file_path: Optional[str] = None,
+        rem_tags_spec_file_path: Optional[str] = None,
         log_dir: Optional[str] = None,
         autolog: bool = False,
     ):
@@ -35,9 +35,9 @@ class SQLAgent:
             client: LLM client enum value (e.g., Client.ANTHROPIC)
             llm_name: LLM model name enum value (e.g., LLMName.SONNET45)
             system_prompt: Optional custom system prompt for the LLM
-            reduce_spec: Optional schema reduction specification
-            fk_spec: Optional foreign key addition specification
-            rem_tags_spec: Optional list of tags to remove from schema
+            transform_spec_file_path: Optional schema transformation specification file path
+            fk_spec_file_path: Optional foreign key addition specification file path
+            rem_tags_spec_file_path: Optional schema tags removal specification file path
             log_dir: Optional root directory for logging conversations
             autolog: If True, automatically log conversations after each query
 
@@ -57,14 +57,14 @@ class SQLAgent:
         schema_yaml = db.yaml()
         self.schema_man = RelSchemaMan(schema_yaml)
 
-        if reduce_spec:
-            self.schema_man.reduce(reduce_spec)
+        if transform_spec_file_path:
+            self.schema_man.transform(transform_spec_file_path)
 
-        if fk_spec:
-            self.schema_man.add_fks(fk_spec)
+        if fk_spec_file_path:
+            self.schema_man.add_fks(fk_spec_file_path)
 
-        if rem_tags_spec:
-            self.schema_man.remove_tags(rem_tags_spec)
+        if rem_tags_spec_file_path:
+            self.schema_man.remove_tags(rem_tags_spec_file_path)
 
         # Create Conversation instance
         self.conversation = Conversation.create(
@@ -81,11 +81,11 @@ class SQLAgent:
         # Insert schema at end of conversation
         schema_text = self.schema_man.yaml()
         self.conversation.insert_message_at_end(
-            f"Database Schema:\n{schema_text}",
+            f"Database Schema:\n```yaml\n{schema_text}\n```",
             msg_type="user"
         )
 
-    def text2sql(self, question: str, questiontag: str) -> None:
+    def text2sql(self, questiontag: str, question: str) -> None:
         """Convert natural language question to SQL and execute it.
 
         Args:
@@ -138,4 +138,4 @@ class SQLAgent:
         if not self.log_dir:
             raise ValueError("log_dir must be set before logging")
 
-        self.conversation.log(self.log_dir, self.db.dbname(), self.model, tag, version)
+        self.conversation.log(self.log_dir, self.db.name, self.model, tag, version)

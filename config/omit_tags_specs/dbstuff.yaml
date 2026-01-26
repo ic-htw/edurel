@@ -1,0 +1,3 @@
+omit_tags:
+- nullable
+- fkname

@@ -1,0 +1,3 @@
+foreign_keys:
+- OrgUnit|Head|-->|Employee|EID
+- OrgUnit|SuperUnit|-->|OrgUnit|OEID

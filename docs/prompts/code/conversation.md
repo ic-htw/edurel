@@ -37,3 +37,8 @@
 - provide a factory method for class Conversation that has the following parameters:
   - client enum value
   - llm name enum value
+
+# add import
+- provide a method for class Conversation to import conversation data from a log entry
+- parameter log_dir, l1, l2, l3, l4
+- load file with newest time stamp

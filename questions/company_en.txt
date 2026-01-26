@@ -3,68 +3,85 @@
 create a SQL query that outputs the following columns:
 - eid, lastname, hiredate from table employee
 - entry year per employee 
+
 sorted by eid
 
 ---tag: entry_year_dept_14
 create a SQL query that outputs the following columns:
 - eid, lastname, hiredate from table employee
 - entry year per employee 
+
 only for department 14
+
 sorted by eid
 
 ---tag: hireyears_dept_14
 create a SQL query that outputs the following columns:
 - eid, lastname, hiredate from table employee
 - number of years of deployment per employee 
+
 only for department 14
+
 sorted by eid
 
 ---tag: employees_without_bonus
 create a SQL query that outputs the following columns:
 - lastname, salary, bonus from table employee
+
 only employees without bonus
+
 sorted by eid
 
 ---tag: employees_with_bonus
 create a SQL query that outputs the following columns:
 - lastname, salary, bonus from table employee
+
 only employees with bonus
+
 sorted by eid
 
 ---tag: total_income_per_employe_dept_17
 create a SQL query that outputs the following columns:
 - eid, lastname, salary, bonus from table employee
 - total income per employee 
+
 only for department 17
+
 sorted by eid
 
 ---tag: salary_band_per_employee
 create a SQL query that outputs the following columns:
 - eid, lastname, salary from table employee
 - salary band per employee 
+
 there are the following salary bands:
 - low <= 35000
 - medium > 35000
 - high > 100000
+
 sorted by salary
 
 ---tag: employees_with_orgunit_name
 create a SQL query that outputs the following columns:
 - name from table orgunit with alias orgunit
 - eid, lastname from table employee
+
 sorted by orgunit, eid
 
 ---tag: employees_per_project
 create a SQL query that outputs the following columns:
 - title from table project with alias project
 - eid, lastname from table employee
+
 sorted by title, eid
 
 ---tag: parent_child_org
 create a SQL query that outputs the following columns:
 - name with alias parent from table orgunit
 - bezeichnung mit alias child from table orgunit
+
 child should be direct subunit of parent
+
 sorted by parent, child
 
 ---tag: dept_heads
@@ -72,14 +89,18 @@ create a SQL query that outputs the following columns:
 - eid from table employee
 - lastname with alias head from table employee
 - name with alias orgunit from table orgunit
+
 only for department heads
+
 sorted by eid
 
 ---tag: non_dept_heads
 create a SQL query that outputs the following columns:
 - eid from table employee
 - lastname with alias employee from table employee
+
 only for employees that are not department heads
+
 sorted by eid
 
 ---tag: employees_and_bosses
@@ -88,32 +109,40 @@ create a SQL query that outputs the following columns:
 - salary of the employee with alias esalary from table employee
 - lastname with alias boss  from table employee
 - salary of the boss with alias bsalary from table employee
+
 boss is direct superior of employee
+
 employee earns more than boss
+
 sorted by employee
 
 ---tag: max_salary
 create a SQL query that outputs the following columns:
 - max_salary
+
 max_salary should be the maximum salary of all employees
 
 ---tag: max_salary_per_dept
 create a SQL query that outputs the following columns:
 - name with alias orgunit from table orgunit
 - max_salary_dept
+
 max_salary_dept should be the maximum salary of all employees per orgunit
+
 sorted by descending max_salary_dept
 
 ---tag: total_salary_per_entry_year_of_employees
 create a SQL query that outputs the following columns:
 - entry_year calculated from hiredate
 - salary_year should be the total salary of all employees per entry year
+
 sorted by entry year
 
 ---tag: total_salary_per_entry_decade_of_employees
 create a SQL query that outputs the following columns:
 - decade calculated from hiredate
 - salary_decade should be the total salary of all employees per decade
+
 sorted by decade
 
 ---tag: total_salary_per_orgunit_and_entry_decade_of_employees
@@ -121,12 +150,15 @@ create a SQL query that outputs the following columns:
 - name with alias orgunit from table orgunit
 - decade calculated from hiredate, use floor for calculation
 - salary_decade should be the total salary of all employees per orgunit and decade
+
 sorted by ouid, decade
 
 ---tag: employees_with_salary_above_avg
 create a SQL query that outputs the following columns:
 - name, salary from table employee
+
 only employees who earn more than the average of all employees
+
 sorted by eid
 
 ---tag: employees_with_salary_above_avg_and_diff
@@ -134,9 +166,13 @@ create a SQL query that outputs the following columns:
 - eid, name, salary from table employee
 - average salary of all employees, alias as asalary
 - diff to average salary, alias diff_asalary
+
 only employees who earn more than the average of all employees
+
 use cte for the calculation
+
 round calculation to 2 decimal places
+
 sorted by eid
 
 ---tag: employees_with_salary_above_avg_per_dept_and_diff
@@ -145,13 +181,17 @@ create a SQL query that outputs the following columns:
 - eid, name, salary from table employee
 - average salary of all employees in the same department, alias asalary_dept
 - diff to average salary, alias diff_asalary_dept
+
 use cte for the calculation
+
 round calculation to 2 decimal places
+
 sorted by ouid, eid
 
 ---tag: employees_of_head_umarani
 create a SQL query that outputs the following columns:
 - eid, lastname from table employee
+
 only employees who work in a department that is led by 'Umarani'
 
 ---tag: orgunits_with_least_employees
@@ -159,13 +199,16 @@ create a SQL query that outputs the following columns:
 - ouid, name with alias orgunit from table orgunit
 - number of employees in the orgunit, alias num_employees
 - only orgunits with the least employees
+
 sorted by ouid
 
 ---tag: orgunit_with_max_avg_salary
 create a SQL query that outputs the following columns:
 - ouid, name with alias orgunit from table orgunit
 - average salary of all employees in that orgunit, alias asal
+
 only orgunit with max avg salary
+
 sorted by ouid
 
 

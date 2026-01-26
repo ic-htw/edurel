@@ -1,0 +1,3 @@
+transformation_steps:
+- "del table pattern: EmpProj"
+- "del table pattern: Project"
