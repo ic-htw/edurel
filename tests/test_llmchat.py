@@ -8,7 +8,7 @@ from unittest.mock import Mock
 import pytest
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
-from edurel.utils.llmchat import LLMChat
+from edurel.utils.conversation import LLMChat
 
 
 @pytest.fixture

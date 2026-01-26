@@ -12,7 +12,7 @@ import ipywidgets as widgets
 from IPython.display import display
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
-from edurel.utils.llmchat import LLMChat
+from edurel.utils.conversation import LLMChat
 
 
 class ChatMan:

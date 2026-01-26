@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 
 
-class SMan:
+class RelSchemaMan:
     def __init__(self, yaml_str: str):
         import copy
         self.yaml_base_dict = yaml.safe_load(yaml_str)
