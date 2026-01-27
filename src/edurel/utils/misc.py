@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Callable, List, Any
 from .duckdb import Db
 
 
@@ -113,3 +113,52 @@ def csv_to_parquet(
         db.exe(f"COPY (SELECT * FROM {tn}) TO '{str(out_f)}' (FORMAT 'parquet');")
 
 
+def gslice(spec: str) -> Callable[[List[Any]], List[Any]]:
+    """Create a generalized slicing function from a spec string.
+
+    Args:
+        spec: String of form "i1, i2:i3, i4, i5:i6" where indices are integers.
+              Individual indices (i1, i4) select single elements.
+              Range slices (i2:i3, i5:i6) select ranges [start:end) like Python slicing.
+              Negative indices are supported.
+              Empty start/end in ranges use list boundaries (e.g., ":3" or "5:").
+
+    Returns:
+        Function that takes a list and returns elements matching the spec.
+
+    Examples:
+        >>> f = gslice("0, 2:5, 7")
+        >>> f(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
+        ['a', 'c', 'd', 'e', 'h']
+
+        >>> g = gslice("1:3, -1")
+        >>> g([10, 20, 30, 40, 50])
+        [20, 30, 50]
+
+        >>> h = gslice(":2, -2:")
+        >>> h(['x', 'y', 'z', 'w'])
+        ['x', 'y', 'z', 'w']
+    """
+    # Parse the spec string
+    parts = [p.strip() for p in spec.split(',')]
+
+    def slicer(lst: List[Any]) -> List[Any]:
+        result = []
+        for part in parts:
+            if ':' in part:
+                # Range slice
+                slice_parts = part.split(':', 1)
+                start_str = slice_parts[0].strip()
+                end_str = slice_parts[1].strip()
+
+                start = int(start_str) if start_str else None
+                end = int(end_str) if end_str else None
+
+                result.extend(lst[start:end])
+            else:
+                # Individual index
+                idx = int(part)
+                result.append(lst[idx])
+        return result
+
+    return slicer

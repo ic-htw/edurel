@@ -26,7 +26,6 @@ class SQLAgent:
         fk_spec_file_path: Optional[str] = None,
         rem_tags_spec_file_path: Optional[str] = None,
         log_dir: Optional[str] = None,
-        autolog: bool = False,
     ):
         """Initialize SQLAgent with database, LLM, and optional transformations.
 
@@ -39,19 +38,10 @@ class SQLAgent:
             fk_spec_file_path: Optional foreign key addition specification file path
             rem_tags_spec_file_path: Optional schema tags removal specification file path
             log_dir: Optional root directory for logging conversations
-            autolog: If True, automatically log conversations after each query
-
-        Raises:
-            ValueError: If autolog is True but log_dir is not set
         """
         self.db = db
         self.model = llm_name.name
         self.log_dir = log_dir
-        self.autolog = autolog
-
-        # Validate autolog/log_dir combination
-        if self.autolog and not self.log_dir:
-            raise ValueError("log_dir must be set when autolog is True")
 
         # Create RelSchemaMan instance and apply transformations
         schema_yaml = db.yaml()
@@ -85,13 +75,16 @@ class SQLAgent:
             msg_type="user"
         )
 
-    def text2sql(self, questiontag: str, question: str) -> None:
+    def text2sql(self, questiontag: str, question: str, version: str = "v1", autolog: bool = False) -> None:
         """Convert natural language question to SQL and execute it.
 
         Args:
             question: Natural language question to convert to SQL
             questiontag: Tag or identifier for the question
         """
+
+        ok = True
+
         # Get LLM response
         response = self.conversation.add_user_message(question)
 
@@ -99,26 +92,36 @@ class SQLAgent:
         if "err:" in response:
             # Insert error as AI message and stop
             self.conversation.insert_message_at_end(response, msg_type="ai")
-            return response
+            ok = False
 
         # Extract SQL from response
-        sql_code = sql_extract(response)
+        if ok:
+            sql_code = sql_extract(response)
 
-        if not sql_code:
-            error_msg = "err: Could not extract SQL code from response"
-            self.conversation.insert_message_at_end(error_msg, msg_type="ai")
-            return error_msg
+            if not sql_code:
+                error_msg = "err: Could not extract SQL code from response"
+                self.conversation.insert_message_at_end(error_msg, msg_type="ai")
+                ok = False
 
         # Execute SQL
-        result = self.db.eval_nx(sql_code)
+        if ok:
+            result = self.db.eval_nx(sql_code)
+
+            if "err:" in result:
+                # Insert error as AI message and stop
+                self.conversation.insert_message_at_end(result, msg_type="ai")
+                ok = False
 
         # Insert result as markdown plaintext
-        result_formatted = md_plain(result)
-        self.conversation.insert_message_at_end(result_formatted, msg_type="user")
+        if ok:
+            result_formatted = md_plain(result)
+            self.conversation.insert_message_at_end(result_formatted, msg_type="user")
 
         # Log if autolog is enabled
-        if self.autolog:
-            self.log(questiontag, "v1")
+        if autolog:
+            if not self.log_dir:
+                raise ValueError("log_dir must be set before logging")
+            self.log(questiontag, version)
 
 
     def set_log_dir(self, log_dir: str) -> None:

@@ -108,6 +108,7 @@ class LLMName(Enum):
     KIMIK2 = "kimik2"
     OPUS41 = "opus41"
     OPUS45 = "opus45"
+    QWEN3CODER = "qwen3coder"
     SONNET4 = "sonnet4"
     SONNET45 = "sonnet45"
 
@@ -131,6 +132,7 @@ LLM_NAME_STRINGS = {
     LLMName.KIMIK2: "kimi-k2-0905",
     LLMName.OPUS41: "claude-opus-4-1-20250805",
     LLMName.OPUS45: "claude-opus-4-5-20251101",
+    LLMName.QWEN3CODER: "qwen3-coder-480b-a35b-instruct",
     LLMName.SONNET4: "claude-sonnet-4-20250514",
     LLMName.SONNET45: "claude-sonnet-4-5-20250929",
 }

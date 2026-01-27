@@ -1,5 +1,5 @@
 import pytest
-from edurel.utils.misc import sql_extract
+from edurel.utils.misc import sql_extract, gslice
 
 
 class TestSqlExtract:
@@ -188,3 +188,147 @@ This is additional text that should not be included.
         result = sql_extract(text)
         assert result == "SELECT * FROM users"
         assert "This is additional text" not in result
+
+
+class TestGslice:
+    """Test suite for gslice function."""
+
+    def test_single_index(self):
+        """Test selecting a single element by index."""
+        f = gslice("2")
+        result = f(['a', 'b', 'c', 'd', 'e'])
+        assert result == ['c']
+
+    def test_multiple_indices(self):
+        """Test selecting multiple individual elements."""
+        f = gslice("0, 2, 4")
+        result = f(['a', 'b', 'c', 'd', 'e'])
+        assert result == ['a', 'c', 'e']
+
+    def test_single_range(self):
+        """Test selecting a range of elements."""
+        f = gslice("1:4")
+        result = f(['a', 'b', 'c', 'd', 'e'])
+        assert result == ['b', 'c', 'd']
+
+    def test_multiple_ranges(self):
+        """Test selecting multiple ranges."""
+        f = gslice("0:2, 3:5")
+        result = f(['a', 'b', 'c', 'd', 'e'])
+        assert result == ['a', 'b', 'd', 'e']
+
+    def test_mixed_indices_and_ranges(self):
+        """Test mixing individual indices and ranges."""
+        f = gslice("0, 2:5, 7")
+        result = f(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
+        assert result == ['a', 'c', 'd', 'e', 'h']
+
+    def test_negative_index(self):
+        """Test using negative indices."""
+        f = gslice("-1")
+        result = f(['a', 'b', 'c', 'd', 'e'])
+        assert result == ['e']
+
+    def test_negative_indices_multiple(self):
+        """Test using multiple negative indices."""
+        f = gslice("-3, -1")
+        result = f(['a', 'b', 'c', 'd', 'e'])
+        assert result == ['c', 'e']
+
+    def test_negative_range(self):
+        """Test using negative indices in ranges."""
+        f = gslice("-3:-1")
+        result = f(['a', 'b', 'c', 'd', 'e'])
+        assert result == ['c', 'd']
+
+    def test_mixed_positive_negative(self):
+        """Test mixing positive and negative indices."""
+        f = gslice("1:3, -1")
+        result = f([10, 20, 30, 40, 50])
+        assert result == [20, 30, 50]
+
+    def test_open_start_range(self):
+        """Test range with open start (from beginning)."""
+        f = gslice(":3")
+        result = f(['a', 'b', 'c', 'd', 'e'])
+        assert result == ['a', 'b', 'c']
+
+    def test_open_end_range(self):
+        """Test range with open end (to end of list)."""
+        f = gslice("2:")
+        result = f(['a', 'b', 'c', 'd', 'e'])
+        assert result == ['c', 'd', 'e']
+
+    def test_open_both_range(self):
+        """Test range with both ends open (entire list)."""
+        f = gslice(":")
+        result = f(['a', 'b', 'c'])
+        assert result == ['a', 'b', 'c']
+
+    def test_multiple_open_ranges(self):
+        """Test multiple ranges with open ends."""
+        f = gslice(":2, -2:")
+        result = f(['x', 'y', 'z', 'w'])
+        assert result == ['x', 'y', 'z', 'w']
+
+    def test_empty_list(self):
+        """Test with empty list."""
+        f = gslice(":")
+        result = f([])
+        assert result == []
+
+    def test_single_element_list(self):
+        """Test with single element list."""
+        f = gslice("0")
+        result = f(['x'])
+        assert result == ['x']
+
+    def test_out_of_order_indices(self):
+        """Test that indices are returned in spec order, not list order."""
+        f = gslice("4, 1, 3")
+        result = f(['a', 'b', 'c', 'd', 'e'])
+        assert result == ['e', 'b', 'd']
+
+    def test_overlapping_ranges(self):
+        """Test with overlapping ranges."""
+        f = gslice("0:3, 1:4")
+        result = f(['a', 'b', 'c', 'd', 'e'])
+        assert result == ['a', 'b', 'c', 'b', 'c', 'd']
+
+    def test_duplicate_indices(self):
+        """Test with duplicate indices."""
+        f = gslice("1, 1, 1")
+        result = f(['a', 'b', 'c'])
+        assert result == ['b', 'b', 'b']
+
+    def test_whitespace_handling(self):
+        """Test that whitespace in spec is handled correctly."""
+        f = gslice(" 0 , 2:4 , 5 ")
+        result = f(['a', 'b', 'c', 'd', 'e', 'f'])
+        assert result == ['a', 'c', 'd', 'f']
+
+    def test_empty_range(self):
+        """Test range that selects no elements."""
+        f = gslice("3:3")
+        result = f(['a', 'b', 'c', 'd', 'e'])
+        assert result == []
+
+    def test_numeric_list(self):
+        """Test with numeric list."""
+        f = gslice("0, 2:4")
+        result = f([10, 20, 30, 40, 50])
+        assert result == [10, 30, 40]
+
+    def test_complex_spec(self):
+        """Test complex spec with multiple operations."""
+        f = gslice("0, 2:5, 7, 9:11, -1")
+        result = f([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+        assert result == [0, 2, 3, 4, 7, 9, 10, 11]
+
+    def test_function_reusability(self):
+        """Test that returned function can be reused on different lists."""
+        f = gslice("0, -1")
+        result1 = f(['a', 'b', 'c'])
+        result2 = f([1, 2, 3, 4, 5])
+        assert result1 == ['a', 'c']
+        assert result2 == [1, 5]

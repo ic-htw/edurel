@@ -6,6 +6,7 @@
 **/cred*.*
 **/ollama/api.http
 **/spider2
+**/logs
 
 
 # Byte-compiled / optimized / DLL files
