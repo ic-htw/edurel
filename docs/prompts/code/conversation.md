@@ -42,3 +42,6 @@
 - provide a method for class Conversation to import conversation data from a log entry
 - parameter log_dir, l1, l2, l3, l4
 - load file with newest time stamp
+
+# add delete with slice
+- provide a method for class Conversation to delete a slice of messages

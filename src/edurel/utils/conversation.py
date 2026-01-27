@@ -353,6 +353,36 @@ class Conversation:
 
         return deleted_count
 
+    def delete_slice(
+        self, start: Optional[int] = None, stop: Optional[int] = None, step: Optional[int] = None
+    ) -> int:
+        """
+        Delete a slice of messages from the conversation chain.
+
+        Uses Python's slice notation to delete a range of messages.
+        Supports negative indexing and step values.
+
+        Args:
+            start: Starting index (inclusive). None means start from beginning.
+            stop: Ending index (exclusive). None means go to end.
+            step: Step value. None defaults to 1.
+
+        Returns:
+            Number of messages successfully deleted.
+
+        Examples:
+            >>> conv.delete_slice(1, 3)  # Delete messages at indices 1 and 2
+            >>> conv.delete_slice(2)     # Delete from index 2 to end
+            >>> conv.delete_slice(None, -1)  # Delete all except last message
+            >>> conv.delete_slice(0, None, 2)  # Delete every other message starting from 0
+        """
+        # Calculate the indices that will be deleted by the slice
+        slice_obj = slice(start, stop, step)
+        indices_to_delete = list(range(len(self.messages)))[slice_obj]
+
+        # Use the existing delete_messages method to handle deletion
+        return self.delete_messages(indices_to_delete)
+
     def insert_message(
         self, index: int, message: Union[str, BaseMessage], msg_type: str = "user"
     ) -> bool:

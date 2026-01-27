@@ -5,7 +5,7 @@ from datetime import datetime
 from .duckdb import Db
 from .conversation import Conversation, Client, LLMName
 from .rel_schema_man import RelSchemaMan
-from .misc import sql_extract, md_plain
+from .misc import sql_extract, md_plain, md_yaml
 
 
 class SQLAgent:
@@ -81,7 +81,7 @@ class SQLAgent:
         # Insert schema at end of conversation
         schema_text = self.schema_man.yaml()
         self.conversation.insert_message_at_end(
-            f"Database Schema:\n```yaml\n{schema_text}\n```",
+            f"Database Schema:\n{md_yaml(schema_text)}",
             msg_type="user"
         )
 
