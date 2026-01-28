@@ -1,0 +1,93 @@
+entities:
+# only atomic keys and attributes
+# use associative_entities if composite keys are needed
+- entityname: E1
+  key: K1 
+  attributes:
+  - attributename: A11
+    type: INTEGER
+  - attributename: A12
+    type: TEXT
+  - attributename: A13
+    type: DATE
+  - attributename: A14
+    type: DECIMAL
+- entityname: E2
+  key: K2
+  attributes:
+  - attributename: A21
+    type: INTEGER
+  - attributename: A22
+    type: TEXT
+  - attributename: A23
+    type: DATE
+  - attributename: A24
+    type: DECIMAL
+
+associative_entities:
+# identification alternatives
+# 1. just atomic key
+# 2. identified by other entities (only with cardinality ONE)
+# 3. combination of both
+# if roles are omitted in associations, default roles are used (E1, E2, ...)
+# Associations are entities and relationships at the same time
+- associationname: AE1
+  associations:
+  - targetentity: E1
+    role: Role1
+    cardinality: ONE
+  - targetentity: E2
+    role: Role2 
+    cardinality: ONE
+  - targetentity: E3
+    role: Role2 
+    cardinality: MANY
+  key: KAE1 #
+  identified_by:
+  - targetentity: E1
+    cardinality: ONE
+  - targetentity: E2
+    cardinality: ONE
+  attributes:
+  - attributename: AEA1
+    type: INTEGER
+  - attributename: AEA2
+    type: TEXT
+  - attributename: AEA3
+    type: DATE
+  - attributename: AEA4
+    type: DECIMAL
+
+relationships:
+# if roles are omitted in associations, default roles are used (E1, E2, ...)
+# all relationships are binary
+# cardinality values: ONE, MANY, OPTIONAL_ONE, OPTIONAL_MANY
+- relationshipname: R1
+  entities:
+  - entityname: E1
+    role: Role1
+  - entityname: E2
+    role: Role2
+  cardinality:
+    Role1: MANY
+    Role2: ONE
+  attributes:
+  - attributename: RA1
+    type: INTEGER
+  - attributename: RA2
+    type: TEXT
+  - attributename: RA3
+    type: DATE
+  - attributename: RA4
+    type: DECIMAL    
+
+valuelists:
+# each valuelist is an entity with the following attributes:
+# ID: INTEGER
+# Description: TEXT
+# IsValid: BOOLEAN
+# SortOrder: INTEGER
+# valulists will be transformed into tables in the relational schema
+# each row in that table represents one value in the valuelist
+- valuelistname: VL1
+- valuelistname: VL2
