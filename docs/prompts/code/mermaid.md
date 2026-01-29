@@ -23,3 +23,7 @@
 - provide two factory methods, one with model as str and one with model in file path
 - turn function er_to_mermaid from misc.py  into a method with name toMermaid
 - modularize that code into helper methods for each main element of the model
+
+# rewrite ERDiagram
+- rewrite class ERDiagram such that it provides mermaid code for classDiagram instead of erDiagram 
+- keep the current processing structure, change only the syntax of the output

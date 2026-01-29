@@ -1,10 +1,10 @@
 import yaml
+from pathlib import Path
 from typing import List
-from edurel.utils.misc import ml_unindent
 
 
 class ERDiagram:
-    """Class for converting ER diagrams from YAML format to Mermaid classDiagram syntax.
+    """Class for converting ER diagrams from YAML format to Mermaid syntax.
 
     The ER model should contain the following optional keys:
     - entities: List of entity definitions
@@ -50,56 +50,42 @@ class ERDiagram:
         return cls(model_str)
 
     def toMermaid(self) -> str:
-        """Convert ER diagram to Mermaid classDiagram syntax.
+        """Convert ER diagram to Mermaid ER diagram syntax.
 
         Returns:
-            str: Mermaid classDiagram code
+            str: Mermaid ER diagram code
         """
-
-        init_str = """
-        ---
-          config:
-            class:
-              hideEmptyMembersBox: true
-            themeVariables:
-              primaryColor: "#00ff00"
-        ---
-
-        classDiagram
-        """
-
-        lines = [ml_unindent(init_str)]
+        lines = ["erDiagram"]
         lines.extend(self._process_entities())
         lines.extend(self._process_valuelists())
         lines.extend(self._process_associative_entities())
         lines.extend(self._process_associative_relationships())
         lines.extend(self._process_relationships())
         lines.extend(self._process_inheritances())
-        lines.append("classDef default fill:lightgrey,color:blue")
         return "\n".join(lines)
 
     def _cardinality_to_mermaid(self, card: str) -> str:
-        """Convert cardinality notation to Mermaid classDiagram multiplicity.
+        """Convert cardinality notation to Mermaid symbols.
 
         Args:
             card: ONE, MANY, OPTIONAL_ONE, or OPTIONAL_MANY
 
         Returns:
-            str: Mermaid multiplicity notation (1, *, 0..1, 0..*)
+            str: Mermaid cardinality symbol (||, |o, }|, }o)
         """
         mapping = {
-            'ONE': '1',
-            'MANY': '*',
-            'OPTIONAL_ONE': '0..1',
-            'OPTIONAL_MANY': '0..*'
+            'ONE': '||',
+            'MANY': '}|',
+            'OPTIONAL_ONE': '|o',
+            'OPTIONAL_MANY': '}o'
         }
-        return mapping.get(card, '1')
+        return mapping.get(card, '||')
 
     def _process_entities(self) -> List[str]:
-        """Process regular entities into Mermaid class definitions.
+        """Process regular entities into Mermaid entity definitions.
 
         Returns:
-            List of Mermaid class definition lines
+            List of Mermaid entity definition lines
         """
         lines = []
         entities = self.schema.get('entities', [])
@@ -109,50 +95,49 @@ class ERDiagram:
             key = entity.get('key')
             attributes = entity.get('attributes', [])
 
-            lines.append(f"    class {entity_name} {{")
+            lines.append(f"    {entity_name} {{")
 
             # Add key as PK
             if key:
-                lines.append(f"        +string {key}")
+                lines.append(f"        string {key} PK")
 
             # Add attributes
             for attr in attributes:
                 attr_name = attr['attributename']
                 attr_type = attr['type']
-                lines.append(f"        +{attr_type} {attr_name}")
+                lines.append(f"        {attr_type} {attr_name}")
 
             lines.append("    }")
 
         return lines
 
     def _process_valuelists(self) -> List[str]:
-        """Process valuelists into Mermaid class definitions.
+        """Process valuelists into Mermaid entity definitions.
 
-        Valuelists are represented as classes with standard fields.
+        Valuelists are represented as entities with standard fields.
 
         Returns:
-            List of Mermaid class definition lines
+            List of Mermaid entity definition lines
         """
         lines = []
         valuelists = self.schema.get('valuelists', [])
 
         for vl in valuelists:
             vl_name = vl['valuelistname']
-            lines.append(f"    class {vl_name} {{")
-            lines.append("        **M** ID INTEGER")
-            lines.append("        **O** Description TEXT")
-            lines.append("        IsValid BOOLEAN")
-            lines.append("        SortOrder INTEGER")
-            lines.append("        KEY(ID)")
+            lines.append(f"    {vl_name} {{")
+            lines.append("        INTEGER ID PK")
+            lines.append("        TEXT Description")
+            lines.append("        BOOLEAN IsValid")
+            lines.append("        INTEGER SortOrder")
             lines.append("    }")
 
         return lines
 
     def _process_associative_entities(self) -> List[str]:
-        """Process associative entities into Mermaid class definitions.
+        """Process associative entities into Mermaid entity definitions.
 
         Returns:
-            List of Mermaid class definition lines
+            List of Mermaid entity definition lines
         """
         lines = []
         associative_entities = self.schema.get('associative_entities', [])
@@ -162,17 +147,17 @@ class ERDiagram:
             key = ae.get('key')
             attributes = ae.get('attributes', [])
 
-            lines.append(f"    class {ae_name} {{")
+            lines.append(f"    {ae_name} {{")
 
             # Add key as PK if present
             if key:
-                lines.append(f"        +string {key}")
+                lines.append(f"        string {key} PK")
 
             # Add attributes
             for attr in attributes:
                 attr_name = attr['attributename']
                 attr_type = attr['type']
-                lines.append(f"        +{attr_type} {attr_name}")
+                lines.append(f"        {attr_type} {attr_name}")
 
             lines.append("    }")
 
@@ -199,7 +184,7 @@ class ERDiagram:
 
                 # Associative entity to target entity
                 card_symbol = self._cardinality_to_mermaid(card)
-                lines.append(f"    {ae_name} \"*\" --> \"{card_symbol}\" {target} : {role}")
+                lines.append(f"    {ae_name} }}o--{card_symbol} {target} : \"{role}\"")
 
             # Process identified_by relationships
             identified_by = ae.get('identified_by', [])
@@ -207,7 +192,7 @@ class ERDiagram:
                 target = ident['targetentity']
                 card = ident.get('cardinality', 'ONE')
                 card_symbol = self._cardinality_to_mermaid(card)
-                lines.append(f"    {ae_name} \"*\" --> \"{card_symbol}\" {target} : identified by")
+                lines.append(f"    {ae_name} }}|--{card_symbol} {target} : \"identified by\"")
 
         return lines
 
@@ -243,17 +228,17 @@ class ERDiagram:
                 card1_symbol = self._cardinality_to_mermaid(card1)
                 card2_symbol = self._cardinality_to_mermaid(card2)
 
-                lines.append(f"    {entity1_name} \"{card1_symbol}\" --> \"{card2_symbol}\" {entity2_name} : {rel_name}")
+                lines.append(f"    {entity1_name} {card1_symbol}--{card2_symbol} {entity2_name} : \"{rel_name}\"")
 
         return lines
 
     def _process_inheritances(self) -> List[str]:
         """Process inheritance hierarchies.
 
-        Inheritance is represented using classDiagram inheritance syntax.
+        Inheritance is represented as relationships in Mermaid.
 
         Returns:
-            List of Mermaid inheritance lines
+            List of Mermaid relationship lines
         """
         lines = []
         inheritances = self.schema.get('inheritances', [])
@@ -263,7 +248,7 @@ class ERDiagram:
             sub_entities = inh.get('subentities', [])
 
             for sub in sub_entities:
-                # Represent inheritance using <|-- syntax
-                lines.append(f"    {super_entity} <|-- {sub}")
+                # Represent inheritance as a relationship
+                lines.append(f"    {sub} ||--|| {super_entity} : \"inherits from\"")
 
         return lines

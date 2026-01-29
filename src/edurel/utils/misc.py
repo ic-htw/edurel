@@ -164,6 +164,69 @@ def gslice(spec: str) -> Callable[[List[Any]], List[Any]]:
     return slicer
 
 
+def ml_unindent(text: str) -> str:
+    """Remove indentation from a multiline string based on first non-empty line.
+
+    Shifts the entire multiline string to the left by removing the indentation
+    of the first non-empty line from all lines.
+
+    Args:
+        text: Multiline string to unindent
+
+    Returns:
+        str: Unindented string with consistent left alignment
+
+    Examples:
+        >>> text = '''
+        ...     def hello():
+        ...         print("world")
+        ... '''
+        >>> print(ml_unindent(text))
+        <BLANKLINE>
+        def hello():
+            print("world")
+        <BLANKLINE>
+
+        >>> text = '    Line 1\\n        Line 2\\n    Line 3'
+        >>> print(ml_unindent(text))
+        Line 1
+            Line 2
+        Line 3
+    """
+    if not text:
+        return text
+
+    lines = text.split('\n')
+
+    # Find the first non-empty line
+    first_indent = None
+    for line in lines:
+        if line.strip():
+            # Count leading whitespace
+            first_indent = len(line) - len(line.lstrip())
+            break
+
+    # If all lines are empty, return original
+    if first_indent is None:
+        return text
+
+    # Remove the indent from all lines
+    result_lines = []
+    for line in lines:
+        if line.strip():
+            # Remove up to first_indent spaces from non-empty lines
+            if len(line) >= first_indent and line[:first_indent].strip() == '':
+                result_lines.append(line[first_indent:])
+            else:
+                # Line has less indent than expected, keep as is
+                result_lines.append(line.lstrip())
+        else:
+            # Keep empty lines as empty
+            result_lines.append(line)
+
+    return '\n'.join(result_lines)
+
+
 def er_to_mermaid(schema: dict) -> str:
     """Convert ER diagram from YAML format to Mermaid ER diagram syntax.
 

@@ -25,3 +25,7 @@
 - it should return a function that given a list returns a sub list containing only elements of the spec
 - generate tests
 - put gslice in misc.py in utils
+
+# strip
+- write a function ml_unindent that shifts a multiline string to the left corresponding to the indent of the first non-empty line
+- put ml_unindent in misc.py in utils
