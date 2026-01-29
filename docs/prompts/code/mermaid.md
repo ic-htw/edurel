@@ -13,3 +13,13 @@
   - if the code is set manually, the output sould be redrawn
 
 
+# ERDiagram
+# write a python class for ER Diagrams
+- put the code in mermaid.py in utils folder
+- the classname should be ERDiagram
+## init parameters of class
+- ermodel: a yaml string containing the model
+## implementation
+- provide two factory methods, one with model as str and one with model in file path
+- turn function er_to_mermaid from misc.py  into a method with name toMermaid
+- modularize that code into helper methods for each main element of the model

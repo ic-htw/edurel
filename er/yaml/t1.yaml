@@ -1,0 +1,34 @@
+entities:
+- entityname: Building
+  key: BuildingID
+  attributes:
+  - attributename: Name
+    type: TEXT
+  - attributename: Address
+    type: TEXT
+  - attributename: ConstructionYear
+    type: INTEGER
+  - attributename: NumberOfFloors
+    type: INTEGER
+- entityname: Room
+  key: RoomID
+  attributes:
+  - attributename: RoomNumber
+    type: TEXT
+  - attributename: Floor
+    type: INTEGER
+  - attributename: Area
+    type: DECIMAL
+  - attributename: RoomType
+    type: TEXT
+
+relationships:
+- relationshipname: BuildingRoom
+  entities:
+  - entityname: Building
+    role: Contains
+  - entityname: Room
+    role: LocatedIn
+  cardinality:
+    Contains: ONE
+    LocatedIn: MANY
