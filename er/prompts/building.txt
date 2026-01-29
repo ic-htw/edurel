@@ -1,0 +1,13 @@
+---db: building
+---tag: building1
+Create an ER model that deals with building an rooms.
+Adhere to the given yaml structure
+
+---tag: building2
+Create an ER model that deals with building an rooms.
+Rooms should be an associative entity identified by the building
+Adhere to the given yaml structure
+
+---tag: building3
+Erzeuge ein ER-Modell für Gebäude und Räume
+Halte dich an die gegebene YAML-Struktur

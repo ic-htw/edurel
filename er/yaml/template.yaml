@@ -81,6 +81,13 @@ relationships:
   - attributename: RA4
     type: DECIMAL    
 
+inheritances:
+# only single inheritance is supported
+- superentity: E1
+  subentities:
+  - E1A
+  - E1B
+
 valuelists:
 # each valuelist is an entity with the following attributes:
 # ID: INTEGER

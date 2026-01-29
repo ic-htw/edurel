@@ -162,3 +162,176 @@ def gslice(spec: str) -> Callable[[List[Any]], List[Any]]:
         return result
 
     return slicer
+
+
+def er_to_mermaid(schema: dict) -> str:
+    """Convert ER diagram from YAML format to Mermaid ER diagram syntax.
+
+    Args:
+        schema: Dictionary containing ER diagram specification with keys:
+                - entities: List of entity definitions
+                - associative_entities: List of associative entity definitions
+                - relationships: List of relationship definitions
+                - inheritances: List of inheritance hierarchies
+                - valuelists: List of valuelist definitions
+
+    Returns:
+        str: Mermaid ER diagram code
+
+    Example:
+        >>> schema = {
+        ...     'entities': [
+        ...         {'entityname': 'Student', 'key': 'StudentID',
+        ...          'attributes': [{'attributename': 'Name', 'type': 'TEXT'}]}
+        ...     ],
+        ...     'relationships': [
+        ...         {'relationshipname': 'Enrolls',
+        ...          'entities': [
+        ...              {'entityname': 'Student', 'role': 'student'},
+        ...              {'entityname': 'Course', 'role': 'course'}
+        ...          ],
+        ...          'cardinality': {'student': 'MANY', 'course': 'MANY'}}
+        ...     ]
+        ... }
+        >>> print(er_to_mermaid(schema))
+        erDiagram
+            Student {
+                TEXT StudentID PK
+                TEXT Name
+            }
+        ...
+    """
+    lines = ["erDiagram"]
+
+    # Helper function to map cardinality to Mermaid notation
+    def cardinality_to_mermaid(card: str) -> str:
+        """Convert cardinality notation to Mermaid symbols.
+
+        Args:
+            card: ONE, MANY, OPTIONAL_ONE, or OPTIONAL_MANY
+
+        Returns:
+            str: Mermaid cardinality symbol (||, |o, }|, }o)
+        """
+        mapping = {
+            'ONE': '||',
+            'MANY': '}|',
+            'OPTIONAL_ONE': '|o',
+            'OPTIONAL_MANY': '}o'
+        }
+        return mapping.get(card, '||')
+
+    # Process regular entities
+    entities = schema.get('entities', [])
+    for entity in entities:
+        entity_name = entity['entityname']
+        key = entity.get('key')
+        attributes = entity.get('attributes', [])
+
+        lines.append(f"    {entity_name} {{")
+
+        # Add key as PK
+        if key:
+            lines.append(f"        string {key} PK")
+
+        # Add attributes
+        for attr in attributes:
+            attr_name = attr['attributename']
+            attr_type = attr['type']
+            lines.append(f"        {attr_type} {attr_name}")
+
+        lines.append("    }")
+
+    # Process valuelists (they become entities)
+    valuelists = schema.get('valuelists', [])
+    for vl in valuelists:
+        vl_name = vl['valuelistname']
+        lines.append(f"    {vl_name} {{")
+        lines.append("        INTEGER ID PK")
+        lines.append("        TEXT Description")
+        lines.append("        BOOLEAN IsValid")
+        lines.append("        INTEGER SortOrder")
+        lines.append("    }")
+
+    # Process associative entities
+    associative_entities = schema.get('associative_entities', [])
+    for ae in associative_entities:
+        ae_name = ae['associationname']
+        key = ae.get('key')
+        attributes = ae.get('attributes', [])
+
+        lines.append(f"    {ae_name} {{")
+
+        # Add key as PK if present
+        if key:
+            lines.append(f"        string {key} PK")
+
+        # Add attributes
+        for attr in attributes:
+            attr_name = attr['attributename']
+            attr_type = attr['type']
+            lines.append(f"        {attr_type} {attr_name}")
+
+        lines.append("    }")
+
+    # Process relationships from associative entities
+    for ae in associative_entities:
+        ae_name = ae['associationname']
+
+        # Process associations
+        associations = ae.get('associations', [])
+        for assoc in associations:
+            target = assoc['targetentity']
+            role = assoc.get('role', target)
+            card = assoc.get('cardinality', 'ONE')
+
+            # Associative entity to target entity
+            card_symbol = cardinality_to_mermaid(card)
+            lines.append(f"    {ae_name} }}o--{card_symbol} {target} : \"{role}\"")
+
+        # Process identified_by relationships
+        identified_by = ae.get('identified_by', [])
+        for ident in identified_by:
+            target = ident['targetentity']
+            card = ident.get('cardinality', 'ONE')
+            card_symbol = cardinality_to_mermaid(card)
+            lines.append(f"    {ae_name} }}|--{card_symbol} {target} : \"identified by\"")
+
+    # Process regular relationships
+    relationships = schema.get('relationships', [])
+    for rel in relationships:
+        rel_name = rel['relationshipname']
+        entities_list = rel.get('entities', [])
+        cardinality = rel.get('cardinality', {})
+
+        if len(entities_list) == 2:
+            entity1 = entities_list[0]
+            entity2 = entities_list[1]
+
+            entity1_name = entity1['entityname']
+            entity2_name = entity2['entityname']
+
+            role1 = entity1.get('role', entity1_name)
+            role2 = entity2.get('role', entity2_name)
+
+            # Get cardinalities (default to ONE if not specified)
+            card1 = cardinality.get(role1, 'ONE')
+            card2 = cardinality.get(role2, 'ONE')
+
+            # Build relationship line
+            card1_symbol = cardinality_to_mermaid(card1)
+            card2_symbol = cardinality_to_mermaid(card2)
+
+            lines.append(f"    {entity1_name} {card1_symbol}--{card2_symbol} {entity2_name} : \"{rel_name}\"")
+
+    # Process inheritances
+    inheritances = schema.get('inheritances', [])
+    for inh in inheritances:
+        super_entity = inh['superentity']
+        sub_entities = inh.get('subentities', [])
+
+        for sub in sub_entities:
+            # Represent inheritance as a relationship
+            lines.append(f"    {sub} ||--|| {super_entity} : \"inherits from\"")
+
+    return "\n".join(lines)

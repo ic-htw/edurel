@@ -1,0 +1,95 @@
+entities:
+- entityname: Building
+  key: BuildingID
+  attributes:
+  - attributename: BuildingName
+    type: TEXT
+  - attributename: Address
+    type: TEXT
+  - attributename: City
+    type: TEXT
+  - attributename: PostalCode
+    type: TEXT
+  - attributename: ConstructionYear
+    type: INTEGER
+  - attributename: TotalFloors
+    type: INTEGER
+  - attributename: TotalArea
+    type: DECIMAL
+
+- entityname: Room
+  key: RoomID
+  attributes:
+  - attributename: RoomNumber
+    type: TEXT
+  - attributename: RoomName
+    type: TEXT
+  - attributename: Floor
+    type: INTEGER
+  - attributename: Area
+    type: DECIMAL
+  - attributename: Capacity
+    type: INTEGER
+
+- entityname: RoomType
+  key: RoomTypeID
+  attributes:
+  - attributename: TypeName
+    type: TEXT
+  - attributename: Description
+    type: TEXT
+
+- entityname: Amenity
+  key: AmenityID
+  attributes:
+  - attributename: AmenityName
+    type: TEXT
+  - attributename: Description
+    type: TEXT
+
+associative_entities:
+- associationname: RoomAmenity
+  associations:
+  - targetentity: Room
+    role: Room
+    cardinality: ONE
+  - targetentity: Amenity
+    role: Amenity
+    cardinality: ONE
+  identified_by:
+  - targetentity: Room
+    cardinality: ONE
+  - targetentity: Amenity
+    cardinality: ONE
+  attributes:
+  - attributename: Quantity
+    type: INTEGER
+  - attributename: InstallationDate
+    type: DATE
+
+relationships:
+- relationshipname: Contains
+  entities:
+  - entityname: Building
+    role: Building
+  - entityname: Room
+    role: Room
+  cardinality:
+    Building: ONE
+    Room: MANY
+
+- relationshipname: HasType
+  entities:
+  - entityname: Room
+    role: Room
+  - entityname: RoomType
+    role: RoomType
+  cardinality:
+    Room: MANY
+    RoomType: ONE
+
+inheritances: []
+
+valuelists:
+- valuelistname: RoomStatus
+- valuelistname: BuildingStatus
