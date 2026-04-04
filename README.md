@@ -1,1 +1,1 @@
-# edurel
+# Education Tools for Relational Data
