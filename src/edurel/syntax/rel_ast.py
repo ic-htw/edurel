@@ -21,12 +21,14 @@ class ForeignKey:
     sourcecolumns: list[str] = field(default_factory=list)
     targettable: str = ""
     targetcolumns: list[str] = field(default_factory=list)
+    is_cycle: bool = False
 
     def __str__(self) -> str:
         src_cols = ", ".join(self.sourcecolumns)
         tgt_cols = ", ".join(self.targetcolumns)
         fkname_str = f"{self.fkname}: " if self.fkname else ""
-        return f"{fkname_str}({src_cols}) -> {self.targettable}({tgt_cols})"
+        cycle_str = " [cycle]" if self.is_cycle else ""
+        return f"{fkname_str}({src_cols}) -> {self.targettable}({tgt_cols}){cycle_str}"
 
 
 @dataclass
@@ -49,11 +51,15 @@ class Table:
     columns: list[Column] = field(default_factory=list)
     primary_key: list[str] = field(default_factory=list)
     foreign_keys: list[ForeignKey] = field(default_factory=list)
+    level: int = 0
 
     def __str__(self) -> str:
         cols_str = "\n    ".join(str(col) for col in self.columns)
         pk_str = ", ".join(self.primary_key)
-        result = f"Table: {self.tablename}\n  Primary Key: [{pk_str}]\n  Columns:\n    {cols_str}"
+        result = f"Table: {self.tablename}\n"
+        if self.level != 0:
+            result += f"  Level: {self.level}\n"
+        result += f"  Primary Key: [{pk_str}]\n  Columns:\n    {cols_str}"
 
         if self.foreign_keys:
             fks_str = "\n    ".join(str(fk) for fk in self.foreign_keys)
@@ -121,12 +127,79 @@ class RelAstFactory:
         return Table(
             tablename=data["tablename"],
             columns=[cls.create_column(column) for column in data["columns"]],
-            primary_key=list(data["primary_key"]),
+            primary_key=list(data.get("primary_key", [])),
             foreign_keys=[
                 cls.create_foreign_key(foreign_key)
                 for foreign_key in data.get("foreign_keys", [])
             ],
         )
+
+
+def enrich_ast(rel_schema: RelSchema) -> None:
+    tables_by_name = {table.tablename: table for table in rel_schema.tables}
+
+    for table in rel_schema.tables:
+        table.level = 0
+        for foreign_key in table.foreign_keys:
+            foreign_key.is_cycle = False
+
+    visit_state: dict[str, str] = {}
+
+    def mark_cycles(table: Table) -> None:
+        visit_state[table.tablename] = "visiting"
+        for foreign_key in table.foreign_keys:
+            target_table = tables_by_name.get(foreign_key.targettable)
+            if target_table is None:
+                continue
+            target_state = visit_state.get(target_table.tablename)
+            if target_state == "visiting":
+                foreign_key.is_cycle = True
+                continue
+            if target_state == "visited":
+                continue
+            mark_cycles(target_table)
+        visit_state[table.tablename] = "visited"
+
+    for table in rel_schema.tables:
+        if visit_state.get(table.tablename) is None:
+            mark_cycles(table)
+
+    dependency_count: dict[str, int] = {table.tablename: 0 for table in rel_schema.tables}
+    dependents_by_table: dict[str, list[Table]] = {
+        table.tablename: [] for table in rel_schema.tables
+    }
+
+    for table in rel_schema.tables:
+        seen_targets: set[str] = set()
+        for foreign_key in table.foreign_keys:
+            if foreign_key.is_cycle:
+                continue
+            target_table = tables_by_name.get(foreign_key.targettable)
+            if target_table is None or target_table.tablename in seen_targets:
+                continue
+            seen_targets.add(target_table.tablename)
+            dependency_count[table.tablename] += 1
+            dependents_by_table[target_table.tablename].append(table)
+
+    ready = [table for table in rel_schema.tables if dependency_count[table.tablename] == 0]
+    for table in ready:
+        table.level = 1
+
+    index = 0
+    while index < len(ready):
+        table = ready[index]
+        index += 1
+        for dependent in dependents_by_table[table.tablename]:
+            dependent.level = max(dependent.level, table.level + 1)
+            dependency_count[dependent.tablename] -= 1
+            if dependency_count[dependent.tablename] == 0:
+                if dependent.level == 0:
+                    dependent.level = 1
+                ready.append(dependent)
+
+    for table in rel_schema.tables:
+        if table.level == 0:
+            table.level = 1
 
 def validate_ast(rel_schema: RelSchema) -> None:
     errors: list[str] = []

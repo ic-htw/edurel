@@ -32,7 +32,7 @@ def parse_yaml(text: str, schema: Map) -> dict:
         if "required key(s)" in problem:
             return (
                 "Add the missing required field. Columns need `columnname` and `type`; "
-                "tables need `tablename`, `columns`, and `primary_key`; foreign keys need "
+                "tables need `tablename` and `columns`; foreign keys need "
                 "`sourcecolumns`, `targettable`, and `targetcolumns`."
             )
         if "found non-matching string" in problem:

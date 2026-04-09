@@ -2,16 +2,19 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Optional
 
-from edurel.syntax.rel_ast import RelAstFactory, RelSchema, validate_ast
+from edurel.syntax.rel_ast import RelAstFactory, RelSchema, validate_ast, enrich_ast
 from edurel.syntax.rel_yaml_schema import schema
 from edurel.translation.rel_trans import (
     MermaidTranslationBuilder,
     RelSchemaTranslationBuilder,
     RelSchemaTranslationVisitor,
+    RelSchemaLevelTranslationVisitor,
+    SqlInlineTranslationBuilder,
     SqlTranslationBuilder,
     StructureTranslationBuilder,
     YamlTranslationBuilder,
 )
+from edurel.utils.mermaid import display_mermaid_diagram as display_mermaid_diagram_util, save_mermaid_png
 from edurel.utils.misc import display_md, md_plain, md_yaml, md_sql
 from edurel.utils.yaml import parse_yaml
 
@@ -43,8 +46,12 @@ class RelSchemaMan:
         return cls(rel_ast=rel_ast)
 
     # HELPER
-    def _translate(self, builder: RelSchemaTranslationBuilder) -> str:
-        visitor = RelSchemaTranslationVisitor(builder)
+    def _translate(
+        self,
+        builder: RelSchemaTranslationBuilder,
+        visitor_class: type[RelSchemaTranslationVisitor] = RelSchemaTranslationVisitor,
+    ) -> str:
+        visitor = visitor_class(builder)
         visitor.visit(self.ast)
         return builder.build()
 
@@ -56,24 +63,50 @@ class RelSchemaMan:
 
     # YAML
     def get_yaml(self) -> str:
-        return self._translate(YamlTranslationBuilder())
+        return self._translate(YamlTranslationBuilder(), RelSchemaTranslationVisitor)
     def display_yaml(self) -> None:
         display_md(md_yaml(self.get_yaml()))
 
     # SQL
     def get_sql(self) -> str:
-        return self._translate(SqlTranslationBuilder())
+        return self._translate(SqlTranslationBuilder(), RelSchemaTranslationVisitor)
     def display_sql(self) -> None:
         display_md(md_sql(self.get_sql()))
+    def get_sql_inline(self) -> str:
+        enrich_ast(self.ast)
+        return self._translate(SqlInlineTranslationBuilder(), RelSchemaLevelTranslationVisitor)
+    def display_sql_inline(self) -> None:
+        display_md(md_sql(self.get_sql_inline()))
 
     # MERMAID
-    def get_mermaid(self) -> str:
-        return self._translate(MermaidTranslationBuilder())
-    def display_mermaid(self) -> None:
-        display_md(md_plain(self.get_mermaid()))
-
+    def get_mermaid_code(self, direction: str = "TB") -> str:
+        return self._translate(
+            MermaidTranslationBuilder(direction=direction),
+            RelSchemaTranslationVisitor,
+        )
+    def display_mermaid_code(self, direction: str = "TB") -> None:
+        display_md(md_plain(self.get_mermaid_code(direction=direction)))
+    def display_mermaid_diagram(self, direction="TB", width="100%", height="500px") -> None:
+        mermaid_code = self.get_mermaid_code(direction=direction)
+        display_mermaid_diagram_util(mermaid_code, width=width, height=height)
+    def save_mermaid_diagram(
+        self,
+        output_path: str,
+        direction: str = "TB",
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        scale: float = 1.0,
+        overwrite: bool = False
+    ) -> None:
+        file_path = Path(output_path)
+        if not overwrite and file_path.exists():
+            display_md(md_plain(f"File {output_path} already exists. Use overwrite=True to overwrite."))
+            return
+        mermaid_code = self.get_mermaid_code(direction=direction)
+        save_mermaid_png(mermaid_code, output_path, width=width, height=height, scale=scale)    
+    
     # STRUCTURE
     def get_structure(self) -> str:
-        return self._translate(StructureTranslationBuilder())
+        return self._translate(StructureTranslationBuilder(), RelSchemaTranslationVisitor)
     def display_structure(self) -> None:
         display_md(md_plain(self.get_structure()))

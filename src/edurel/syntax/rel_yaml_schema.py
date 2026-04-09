@@ -24,7 +24,7 @@ table_schema = Map(
     {
         "tablename": Str(),
         "columns": Seq(column_schema),
-        "primary_key": Seq(Str()),
+        Optional("primary_key"): Seq(Str()),
         Optional("foreign_keys"): Seq(foreign_key_schema),
     }
 )

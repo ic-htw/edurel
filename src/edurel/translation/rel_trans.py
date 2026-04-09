@@ -71,6 +71,20 @@ class RelSchemaTranslationVisitor:
         self.builder.add_datalist(datalist)
 
 
+class RelSchemaLevelTranslationVisitor(RelSchemaTranslationVisitor):
+    def visit_RelSchema(self, rel_schema: RelSchema) -> None:
+        if not rel_schema.tables or all(table.level == 0 for table in rel_schema.tables):
+            return
+
+        self.builder.start_schema(rel_schema)
+        leveled_tables = [table for table in rel_schema.tables if table.level > 0]
+        for table in sorted(leveled_tables, key=lambda table: table.level):
+            self.visit(table)
+        for datalist in rel_schema.datalists:
+            self.visit(datalist)
+        self.builder.end_schema(rel_schema)
+
+
 def _yaml_scalar(value: str | bool) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
@@ -83,6 +97,17 @@ def _yaml_scalar(value: str | bool) -> str:
 
 def _strip_sql_type_size(sql_type: str) -> str:
     return re.sub(r"\s*\(.*\)$", "", sql_type).strip()
+
+
+def _sql_foreign_key_constraint(foreign_key: ForeignKey) -> str:
+    constraint_sql = ""
+    if foreign_key.fkname:
+        constraint_sql += f"CONSTRAINT {foreign_key.fkname} "
+    constraint_sql += (
+        f"FOREIGN KEY ({', '.join(foreign_key.sourcecolumns)}) "
+        f"REFERENCES {foreign_key.targettable} ({', '.join(foreign_key.targetcolumns)})"
+    )
+    return constraint_sql
 
 
 class YamlTranslationBuilder(RelSchemaTranslationBuilder):
@@ -206,12 +231,9 @@ class SqlTranslationBuilder(RelSchemaTranslationBuilder):
         self.current_table_lines.append(f"  PRIMARY KEY ({', '.join(table.primary_key)})")
 
     def add_foreign_key(self, table: Table, foreign_key: ForeignKey) -> None:
-        constraint_sql = f"ALTER TABLE {table.tablename}\n  ADD "
-        if foreign_key.fkname:
-            constraint_sql += f"CONSTRAINT {foreign_key.fkname} "
-        constraint_sql += (
-            f"FOREIGN KEY ({', '.join(foreign_key.sourcecolumns)}) "
-            f"REFERENCES {foreign_key.targettable} ({', '.join(foreign_key.targetcolumns)});"
+        constraint_sql = (
+            f"ALTER TABLE {table.tablename}\n"
+            f"  ADD {_sql_foreign_key_constraint(foreign_key)};"
         )
         self.alter_statements.append(constraint_sql)
 
@@ -228,15 +250,62 @@ class SqlTranslationBuilder(RelSchemaTranslationBuilder):
         return "\n\n".join(statements)
 
 
-class MermaidTranslationBuilder(RelSchemaTranslationBuilder):
+class SqlInlineTranslationBuilder(RelSchemaTranslationBuilder):
     def __init__(self) -> None:
+        self.create_statements: list[str] = []
+        self.current_table_lines: list[str] = []
+        self.current_table_comments: list[str] = []
+
+    def start_schema(self, rel_schema: RelSchema) -> None:
+        self.create_statements = []
+
+    def end_schema(self, rel_schema: RelSchema) -> None:
+        return None
+
+    def start_table(self, table: Table) -> None:
+        self.current_table_lines = []
+        self.current_table_comments = []
+
+    def add_column(self, table: Table, column: Column) -> None:
+        column_sql = f"  {column.columnname} {column.type}"
+        if not column.nullable:
+            column_sql += " NOT NULL"
+        self.current_table_lines.append(column_sql)
+
+    def add_primary_key(self, table: Table) -> None:
+        self.current_table_lines.append(f"  PRIMARY KEY ({', '.join(table.primary_key)})")
+
+    def add_foreign_key(self, table: Table, foreign_key: ForeignKey) -> None:
+        constraint_sql = f"  {_sql_foreign_key_constraint(foreign_key)}"
+        if foreign_key.is_cycle:
+            self.current_table_comments.append(f"  -- {constraint_sql.strip()}")
+            return
+        self.current_table_lines.append(constraint_sql)
+
+    def end_table(self, table: Table) -> None:
+        body_lines = [",\n".join(self.current_table_lines)]
+        if self.current_table_comments:
+            body_lines.extend(self.current_table_comments)
+        body = "\n".join(line for line in body_lines if line)
+        self.create_statements.append(f"CREATE TABLE {table.tablename} (\n{body}\n);")
+
+    def add_datalist(self, datalist: DataList) -> None:
+        return None
+
+    def build(self) -> str:
+        return "\n\n".join(self.create_statements)
+
+
+class MermaidTranslationBuilder(RelSchemaTranslationBuilder):
+    def __init__(self, direction: str = "TB") -> None:
+        self.direction = direction
         self.lines: list[str] = []
         self.relationships: list[str] = []
         self.table_columns: dict[str, list[str]] = {}
         self.table_column_lookup: dict[str, dict[str, Column]] = {}
 
     def start_schema(self, rel_schema: RelSchema) -> None:
-        self.lines = ["erDiagram"]
+        self.lines = ["erDiagram", f"  direction {self.direction}"]
         self.relationships = []
         self.table_columns = {}
         self.table_column_lookup = {
@@ -260,7 +329,7 @@ class MermaidTranslationBuilder(RelSchemaTranslationBuilder):
             labels.append("PK")
         if any(column.columnname in foreign_key.sourcecolumns for foreign_key in table.foreign_keys):
             labels.append("FK")
-        label_suffix = f" {' '.join(labels)}" if labels else ""
+        label_suffix = f" {', '.join(labels)}" if labels else ""
         self.table_columns[table.tablename].append(
             f"    {_strip_sql_type_size(column.type)} {column.columnname}{label_suffix}"
         )

@@ -170,6 +170,27 @@ def test_parse_yaml_allows_omitted_optional_sections() -> None:
     }
 
 
+def test_parse_yaml_allows_omitted_primary_key() -> None:
+    text = dedent(
+        """
+        tables:
+        - tablename: users
+          columns:
+          - columnname: id
+            type: INTEGER
+        """
+    )
+
+    assert parse_yaml(text, schema) == {
+        "tables": [
+            {
+                "tablename": "users",
+                "columns": [{"columnname": "id", "type": "INTEGER"}],
+            }
+        ]
+    }
+
+
 @pytest.mark.parametrize(
     "sql_type",
     [
@@ -274,5 +295,4 @@ def test_parse_yaml_reports_malformed_yaml_with_fix() -> None:
     assert "line 6, column 6" in message
     assert "expected <block end>" in message
     assert "indentation" in message
-
 

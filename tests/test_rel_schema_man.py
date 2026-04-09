@@ -160,9 +160,10 @@ def test_get_mermaid_uses_requested_fk_connectors_and_strips_type_sizes() -> Non
         ]
     )
 
-    assert RelSchemaMan.fromAST(rel_schema).get_mermaid() == dedent(
+    assert RelSchemaMan.fromAST(rel_schema).get_mermaid_code() == dedent(
         """
         erDiagram
+          direction TB
           users {
             INTEGER id PK
             DECIMAL balance
@@ -176,7 +177,29 @@ def test_get_mermaid_uses_requested_fk_connectors_and_strips_type_sizes() -> Non
             INTEGER user_id FK
           }
           orders }|--o| users : "user_id -> id"
-          draft_orders }0--o| users : "user_id -> id"
+          draft_orders }o--o| users : "user_id -> id"
+        """
+    ).strip()
+
+
+def test_get_mermaid_code_includes_requested_direction() -> None:
+    rel_schema = RelSchema(
+        tables=[
+            Table(
+                tablename="users",
+                columns=[Column(columnname="id", type="INTEGER")],
+                primary_key=["id"],
+            )
+        ]
+    )
+
+    assert RelSchemaMan.fromAST(rel_schema).get_mermaid_code(direction="LR") == dedent(
+        """
+        erDiagram
+          direction LR
+          users {
+            INTEGER id PK
+          }
         """
     ).strip()
 
