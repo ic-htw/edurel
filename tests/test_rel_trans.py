@@ -4,6 +4,7 @@ from edurel.translation.rel_trans import (
     RelSchemaTranslationBuilder,
     RelSchemaTranslationVisitor,
     SqlInlineTranslationBuilder,
+    SqlTranslationBuilder,
 )
 
 
@@ -168,7 +169,7 @@ def test_sql_inline_translation_builder_inlines_foreign_keys_in_create_table() -
         "CREATE TABLE users (\n"
         "  id INTEGER NOT NULL,\n"
         "  PRIMARY KEY (id)\n"
-        ");\n\n"
+        ");\n"
         "CREATE TABLE orders (\n"
         "  id INTEGER NOT NULL,\n"
         "  user_id INTEGER NOT NULL,\n"
@@ -213,4 +214,75 @@ def test_sql_inline_translation_builder_comments_out_cycle_foreign_keys() -> Non
         "  PRIMARY KEY (id)\n"
         "  -- CONSTRAINT fk_users_profiles FOREIGN KEY (profile_id) REFERENCES profiles (id)\n"
         ");"
+    )
+
+
+def test_sql_translation_builder_generates_datalist_insert_statements() -> None:
+    rel_schema = RelSchema(
+        tables=[
+            Table(
+                tablename="status_codes",
+                columns=[
+                    Column(columnname="ID", type="INTEGER"),
+                    Column(columnname="Description", type="VARCHAR(255)"),
+                    Column(columnname="IsValid", type="BOOLEAN"),
+                    Column(columnname="SortOrder", type="INTEGER"),
+                ],
+                primary_key=["ID"],
+            )
+        ],
+        datalists=[DataList(tablename="status_codes", values=["Open", "Closed", "Owner's Review"])],
+    )
+
+    builder = SqlTranslationBuilder()
+    visitor = RelSchemaTranslationVisitor(builder)
+
+    visitor.visit(rel_schema)
+
+    assert builder.build() == (
+        "CREATE TABLE status_codes (\n"
+        "  ID INTEGER NOT NULL,\n"
+        "  Description VARCHAR(255) NOT NULL,\n"
+        "  IsValid BOOLEAN NOT NULL,\n"
+        "  SortOrder INTEGER NOT NULL,\n"
+        "  PRIMARY KEY (ID)\n"
+        ");\n"
+        "INSERT INTO status_codes (ID, Description, IsValid, SortOrder) VALUES (1, 'Open', TRUE, 1);\n"
+        "INSERT INTO status_codes (ID, Description, IsValid, SortOrder) VALUES (2, 'Closed', TRUE, 2);\n"
+        "INSERT INTO status_codes (ID, Description, IsValid, SortOrder) VALUES (3, 'Owner''s Review', TRUE, 3);"
+    )
+
+
+def test_sql_inline_translation_builder_generates_datalist_insert_statements() -> None:
+    rel_schema = RelSchema(
+        tables=[
+            Table(
+                tablename="status_codes",
+                columns=[
+                    Column(columnname="ID", type="INTEGER"),
+                    Column(columnname="Description", type="VARCHAR(255)"),
+                    Column(columnname="IsValid", type="BOOLEAN"),
+                    Column(columnname="SortOrder", type="INTEGER"),
+                ],
+                primary_key=["ID"],
+            )
+        ],
+        datalists=[DataList(tablename="status_codes", values=["Open", "Closed"])],
+    )
+
+    builder = SqlInlineTranslationBuilder()
+    visitor = RelSchemaTranslationVisitor(builder)
+
+    visitor.visit(rel_schema)
+
+    assert builder.build() == (
+        "CREATE TABLE status_codes (\n"
+        "  ID INTEGER NOT NULL,\n"
+        "  Description VARCHAR(255) NOT NULL,\n"
+        "  IsValid BOOLEAN NOT NULL,\n"
+        "  SortOrder INTEGER NOT NULL,\n"
+        "  PRIMARY KEY (ID)\n"
+        ");\n"
+        "INSERT INTO status_codes (ID, Description, IsValid, SortOrder) VALUES (1, 'Open', TRUE, 1);\n"
+        "INSERT INTO status_codes (ID, Description, IsValid, SortOrder) VALUES (2, 'Closed', TRUE, 2);"
     )

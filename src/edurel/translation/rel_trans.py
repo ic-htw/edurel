@@ -110,6 +110,20 @@ def _sql_foreign_key_constraint(foreign_key: ForeignKey) -> str:
     return constraint_sql
 
 
+def _sql_string_literal(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+
+def _sql_datalist_insert_statements(datalist: DataList) -> list[str]:
+    statements: list[str] = []
+    for index, value in enumerate(datalist.values, start=1):
+        statements.append(
+            f"INSERT INTO {datalist.tablename} (ID, Description, IsValid, SortOrder) "
+            f"VALUES ({index}, {_sql_string_literal(value)}, TRUE, {index});"
+        )
+    return statements
+
+
 class YamlTranslationBuilder(RelSchemaTranslationBuilder):
     def __init__(self) -> None:
         self.tables: list[dict] = []
@@ -209,11 +223,13 @@ class SqlTranslationBuilder(RelSchemaTranslationBuilder):
     def __init__(self) -> None:
         self.create_statements: list[str] = []
         self.alter_statements: list[str] = []
+        self.insert_statements: list[str] = []
         self.current_table_lines: list[str] = []
 
     def start_schema(self, rel_schema: RelSchema) -> None:
         self.create_statements = []
         self.alter_statements = []
+        self.insert_statements = []
 
     def end_schema(self, rel_schema: RelSchema) -> None:
         return None
@@ -242,22 +258,25 @@ class SqlTranslationBuilder(RelSchemaTranslationBuilder):
         self.create_statements.append(f"CREATE TABLE {table.tablename} (\n{body}\n);")
 
     def add_datalist(self, datalist: DataList) -> None:
-        return None
+        self.insert_statements.extend(_sql_datalist_insert_statements(datalist))
 
     def build(self) -> str:
         statements = list(self.create_statements)
         statements.extend(self.alter_statements)
-        return "\n\n".join(statements)
+        statements.extend(self.insert_statements)
+        return "\n".join(statements)
 
 
 class SqlInlineTranslationBuilder(RelSchemaTranslationBuilder):
     def __init__(self) -> None:
         self.create_statements: list[str] = []
+        self.insert_statements: list[str] = []
         self.current_table_lines: list[str] = []
         self.current_table_comments: list[str] = []
 
     def start_schema(self, rel_schema: RelSchema) -> None:
         self.create_statements = []
+        self.insert_statements = []
 
     def end_schema(self, rel_schema: RelSchema) -> None:
         return None
@@ -290,10 +309,12 @@ class SqlInlineTranslationBuilder(RelSchemaTranslationBuilder):
         self.create_statements.append(f"CREATE TABLE {table.tablename} (\n{body}\n);")
 
     def add_datalist(self, datalist: DataList) -> None:
-        return None
+        self.insert_statements.extend(_sql_datalist_insert_statements(datalist))
 
     def build(self) -> str:
-        return "\n\n".join(self.create_statements)
+        statements = list(self.create_statements)
+        statements.extend(self.insert_statements)
+        return "\n".join(statements)
 
 
 class MermaidTranslationBuilder(RelSchemaTranslationBuilder):

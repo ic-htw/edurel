@@ -70,6 +70,64 @@ def test_get_yaml_serializes_ast_to_valid_canonical_yaml() -> None:
     }
 
 
+def test_from_url_reads_yaml_from_url() -> None:
+    yaml_text = dedent(
+        """
+        tables:
+        - tablename: users
+          columns:
+          - columnname: id
+            type: INTEGER
+          primary_key:
+          - id
+        """
+    ).strip()
+
+    class FakeHeaders:
+        def get_content_charset(self) -> str:
+            return "utf-8"
+
+    class FakeResponse:
+        def __init__(self, body: str):
+            self.body = body.encode("utf-8")
+            self.headers = FakeHeaders()
+
+        def read(self) -> bytes:
+            return self.body
+
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            return None
+
+    calls: list[str] = []
+
+    def fake_urlopen(url: str) -> FakeResponse:
+        calls.append(url)
+        return FakeResponse(yaml_text)
+
+    import edurel.core.rel_schema_man as rel_schema_man_module
+
+    original_urlopen = rel_schema_man_module.urlopen
+    rel_schema_man_module.urlopen = fake_urlopen
+    try:
+        rel_schema_man = RelSchemaMan.fromURL("https://example.com/schema.yaml")
+    finally:
+        rel_schema_man_module.urlopen = original_urlopen
+
+    assert calls == ["https://example.com/schema.yaml"]
+    assert rel_schema_man.get_ast() == RelSchema(
+        tables=[
+            Table(
+                tablename="users",
+                columns=[Column(columnname="id", type="INTEGER")],
+                primary_key=["id"],
+            )
+        ]
+    )
+
+
 def test_get_sql_generates_foreign_keys_in_alter_table_statements() -> None:
     rel_schema = RelSchema(
         tables=[
@@ -103,13 +161,11 @@ def test_get_sql_generates_foreign_keys_in_alter_table_statements() -> None:
           id INTEGER NOT NULL,
           PRIMARY KEY (id)
         );
-
         CREATE TABLE orders (
           id INTEGER NOT NULL,
           user_id INTEGER NOT NULL,
           PRIMARY KEY (id)
         );
-
         ALTER TABLE orders
           ADD CONSTRAINT fk_orders_users FOREIGN KEY (user_id) REFERENCES users (id);
         """

@@ -1,6 +1,7 @@
 from copy import deepcopy
 from pathlib import Path
 from typing import Optional
+from urllib.request import urlopen
 
 from edurel.syntax.rel_ast import RelAstFactory, RelSchema, validate_ast, enrich_ast
 from edurel.syntax.rel_yaml_schema import schema
@@ -15,7 +16,7 @@ from edurel.translation.rel_trans import (
     YamlTranslationBuilder,
 )
 from edurel.utils.mermaid import display_mermaid_diagram as display_mermaid_diagram_util, save_mermaid_png
-from edurel.utils.misc import display_md, md_plain, md_yaml, md_sql
+from edurel.utils.misc import display_md, md_plain, md_yaml, md_sql, save_text_to_file
 from edurel.utils.yaml import parse_yaml
 
 
@@ -39,6 +40,13 @@ class RelSchemaMan:
     @classmethod
     def fromFile(cls, file_path: str) -> "RelSchemaMan":
         yaml_str = Path(file_path).read_text(encoding="utf-8")
+        return cls(yaml_str)
+
+    @classmethod
+    def fromURL(cls, url: str) -> "RelSchemaMan":
+        with urlopen(url) as response:
+            encoding = response.headers.get_content_charset() or "utf-8"
+            yaml_str = response.read().decode(encoding)
         return cls(yaml_str)
 
     @classmethod
@@ -66,6 +74,8 @@ class RelSchemaMan:
         return self._translate(YamlTranslationBuilder(), RelSchemaTranslationVisitor)
     def display_yaml(self) -> None:
         display_md(md_yaml(self.get_yaml()))
+    def save_yaml(self, output_path: str, overwrite: bool = False) -> None:
+        save_text_to_file(self.get_yaml(), output_path, overwrite=overwrite)
 
     # SQL
     def get_sql(self) -> str:
@@ -77,6 +87,10 @@ class RelSchemaMan:
         return self._translate(SqlInlineTranslationBuilder(), RelSchemaLevelTranslationVisitor)
     def display_sql_inline(self) -> None:
         display_md(md_sql(self.get_sql_inline()))
+    def save_sql(self, output_path: str, overwrite: bool = False) -> None:
+        save_text_to_file(self.get_sql(), output_path, overwrite=overwrite)
+    def save_sql_inline(self, output_path: str, overwrite: bool = False) -> None:
+        save_text_to_file(self.get_sql_inline(), output_path, overwrite=overwrite)
 
     # MERMAID
     def get_mermaid_code(self, direction: str = "TB") -> str:
@@ -86,6 +100,8 @@ class RelSchemaMan:
         )
     def display_mermaid_code(self, direction: str = "TB") -> None:
         display_md(md_plain(self.get_mermaid_code(direction=direction)))
+    def save_mermaid_code(self, output_path: str, direction: str = "TB", overwrite: bool = False) -> None:
+        save_text_to_file(self.get_mermaid_code(direction=direction), output_path, overwrite=overwrite)
     def display_mermaid_diagram(self, direction="TB", width="100%", height="500px") -> None:
         mermaid_code = self.get_mermaid_code(direction=direction)
         display_mermaid_diagram_util(mermaid_code, width=width, height=height)
