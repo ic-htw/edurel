@@ -1,4 +1,9 @@
+from datetime import date, datetime, time
+from decimal import Decimal
+import math
+import re
 from typing import Dict, List, Any, Optional
+from uuid import UUID
 import duckdb
 import pandas as pd
 from pathlib import Path
@@ -230,3 +235,63 @@ class DuckDbMan:
 
         # Convert to YAML string with proper formatting
         return yaml.dump(schema_dict, default_flow_style=False, sort_keys=False)
+
+    def export_data_as_insert_statements(self, for_tables: List[str]) -> str:
+        """Export data from specified tables as SQL insert statements."""
+        def sql_identifier(identifier: str) -> str:
+            if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", identifier):
+                return identifier
+            return '"' + identifier.replace('"', '""') + '"'
+
+        def sql_literal(value: Any) -> str:
+            if value is None:
+                return "NULL"
+            if isinstance(value, bool):
+                return "TRUE" if value else "FALSE"
+            if isinstance(value, str):
+                return "'" + value.replace("'", "''") + "'"
+            if isinstance(value, (int, Decimal)):
+                return str(value)
+            if isinstance(value, float):
+                if math.isnan(value):
+                    return "CAST('NaN' AS DOUBLE)"
+                if math.isinf(value):
+                    inf = "Infinity" if value > 0 else "-Infinity"
+                    return f"CAST('{inf}' AS DOUBLE)"
+                return repr(value)
+            if isinstance(value, datetime):
+                return "'" + value.isoformat(sep=" ") + "'"
+            if isinstance(value, date):
+                return "'" + value.isoformat() + "'"
+            if isinstance(value, time):
+                return "'" + value.isoformat() + "'"
+            if isinstance(value, UUID):
+                return f"'{value}'"
+            if isinstance(value, bytes):
+                return f"from_hex('{value.hex()}')"
+            try:
+                if pd.isna(value):
+                    return "NULL"
+            except TypeError:
+                pass
+            raise TypeError(f"Unsupported value type for SQL export: {type(value)!r}")
+
+        statements: list[str] = []
+
+        for index, table_name in enumerate(for_tables):
+            table_sql = sql_identifier(table_name)
+            result = self.con.execute(f"SELECT * FROM {table_sql}")
+            rows = result.fetchall()
+            columns = [sql_identifier(column[0]) for column in result.description]
+            columns_sql = ", ".join(columns)
+
+            if index > 0:
+                statements.append("")
+            statements.append(f"-- Table: {table_name}")
+            for row in rows:
+                values_sql = ", ".join(sql_literal(value) for value in row)
+                statements.append(
+                    f"INSERT INTO {table_sql} ({columns_sql}) VALUES ({values_sql});"
+                )
+
+        return "\n".join(statements)

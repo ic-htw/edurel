@@ -1,4 +1,3 @@
-import re
 from strictyaml import load, Map
 from strictyaml.exceptions import YAMLValidationError
 
@@ -95,32 +94,3 @@ def parse_yaml(text: str, schema: Map) -> dict:
             "If the problem persists, inspect custom parser code or validators."
         ) from None
 
-def yaml_extract(md):
-    """Extract YAML code from markdown text.
-
-    Args:
-        md: Markdown text containing YAML code blocks
-
-    Returns:
-        str: Extracted YAML code, or empty string if no YAML found
-    """
-    # First, try to extract from ```yaml ... ``` blocks
-    yaml_block_pattern = r'```yaml\s*\n(.*?)\n```'
-    matches = re.findall(yaml_block_pattern, md, re.DOTALL | re.IGNORECASE)
-    if matches:
-        return matches[0].strip()
-
-    # Also try ```yml ... ``` blocks
-    yml_block_pattern = r'```yml\s*\n(.*?)\n```'
-    matches = re.findall(yml_block_pattern, md, re.DOTALL | re.IGNORECASE)
-    if matches:
-        return matches[0].strip()
-
-    # Look for generic ``` ... ``` blocks that might contain YAML
-    generic_block_pattern = r'```\s*\n(.*?)\n```'
-    matches = re.findall(generic_block_pattern, md, re.DOTALL)
-    if matches:
-        # Return the first generic block (assume it's YAML if no language specified)
-        return matches[0].strip()
-
-    return ""

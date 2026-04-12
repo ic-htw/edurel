@@ -16,7 +16,8 @@ from edurel.translation.rel_trans import (
     YamlTranslationBuilder,
 )
 from edurel.utils.mermaid import display_mermaid_diagram as display_mermaid_diagram_util, save_mermaid_png
-from edurel.utils.misc import display_md, md_plain, md_yaml, md_sql, save_text_to_file
+from edurel.utils.md import display_md, md_plain, md_yaml, md_sql
+from edurel.utils.misc import save_text_to_file
 from edurel.utils.yaml import parse_yaml
 
 

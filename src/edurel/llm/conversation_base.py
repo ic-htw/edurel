@@ -39,17 +39,12 @@ class Conversation:
         else:
             self.messages.insert(0, system_msg)
 
-    def call_llm(self, model: BaseChatModel, prompt: str) -> str:
-        # Add user message
-        user_msg = HumanMessage(content=prompt)
-        self.messages.append(user_msg)
-
+    def call_llm(self, model: BaseChatModel) -> str:
         try:
             ai_response = model.invoke(self.messages)
         except Exception as e:
             ai_response = AIMessage(content=f"err: {str(e)}")
 
-        self.messages.append(ai_response)
         return ai_response.content
     
     def gen_prompt(self, gslice_spec: str = None) -> str:
@@ -75,7 +70,7 @@ class Conversation:
     def get_all_messages(self) -> List[BaseMessage]:
         return self.messages.copy()
 
-    def delete_message(self, index: int) -> bool:
+    def delete_message_at_index(self, index: int) -> bool:
         try:
             del self.messages[index]
             return True
@@ -88,7 +83,7 @@ class Conversation:
         deleted_count = 0
 
         for idx in sorted_indices:
-            if self.delete_message(idx):
+            if self.delete_message_at_index(idx):
                 deleted_count += 1
 
         return deleted_count
@@ -121,7 +116,7 @@ class Conversation:
         indices_to_delete = list(range(len(self.messages)))[slice_obj]
 
         # Use the existing delete_messages method to handle deletion
-        return self.delete_messages(indices_to_delete)
+        return self.delete_messages_by_indices(indices_to_delete)
 
     def clear_messages(self, keep_system: bool = True):
         """
@@ -136,20 +131,9 @@ class Conversation:
         else:
             self.messages = []
 
-    def insert_message(
+    def insert_message_at_index(
         self, index: int, message: Union[str, BaseMessage], msg_type: str = "user"
-    ) -> bool:
-        """
-        Insert a message at a specific position in the conversation chain.
-
-        Args:
-            index: The position to insert the message.
-            message: The message content (string) or a BaseMessage object.
-            msg_type: Type of message ('system', 'user', or 'ai') if message is a string.
-
-        Returns:
-            True if insertion was successful, False otherwise.
-        """
+    ) -> None:
         if isinstance(message, str):
             # Create appropriate message type
             if msg_type.lower() == "system":
@@ -161,31 +145,16 @@ class Conversation:
         else:
             msg_obj = message
 
-        try:
-            self.messages.insert(index, msg_obj)
-            return True
-        except (IndexError, TypeError):
-            return False
+        self.messages.insert(index, msg_obj)
 
     def insert_message_at_end(
         self, message: Union[str, BaseMessage], msg_type: str = "user"
-    ) -> bool:
-        self.insert_message(len(self.messages), message, msg_type)
+    ) -> None:
+        self.insert_message_at_index(len(self.messages), message, msg_type)
 
-    def replace_message(
+    def replace_message_at_index(
         self, index: int, message: Union[str, BaseMessage], msg_type: str = "user"
-    ) -> bool:
-        """
-        Replace a message at a specific position in the conversation chain.
-
-        Args:
-            index: The position of the message to replace.
-            message: The new message content (string) or a BaseMessage object.
-            msg_type: Type of message ('system', 'user', or 'ai') if message is a string.
-
-        Returns:
-            True if replacement was successful, False otherwise.
-        """
+    ) -> None:
         if isinstance(message, str):
             # Create appropriate message type
             if msg_type.lower() == "system":
@@ -197,11 +166,7 @@ class Conversation:
         else:
             msg_obj = message
 
-        try:
-            self.messages[index] = msg_obj
-            return True
-        except IndexError:
-            return False
+        self.messages[index] = msg_obj
 
     def len(self) -> int:
         """
