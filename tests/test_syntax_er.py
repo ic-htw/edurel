@@ -36,10 +36,10 @@ def test_parse_yaml_accepts_complete_valid_er_document() -> None:
         relationships:
         - relationshipname: Advises
           entities:
-          - entityname: Teacher
+          - targetentity: Teacher
             role: advisor
             cardinality: ONE
-          - entityname: Student
+          - targetentity: Student
             role: advisee
             cardinality: OPTIONAL_MANY
           attributes:
@@ -58,7 +58,7 @@ def test_parse_yaml_accepts_complete_valid_er_document() -> None:
           - B
           - C
           many_to_one_from_entities:
-          - entityname: Enrollment
+          - sourceentity: Enrollment
         """
     )
 
@@ -101,12 +101,12 @@ def test_parse_yaml_accepts_complete_valid_er_document() -> None:
                 "relationshipname": "Advises",
                 "entities": [
                     {
-                        "entityname": "Teacher",
+                        "targetentity": "Teacher",
                         "role": "advisor",
                         "cardinality": "ONE",
                     },
                     {
-                        "entityname": "Student",
+                        "targetentity": "Student",
                         "role": "advisee",
                         "cardinality": "OPTIONAL_MANY",
                     },
@@ -125,7 +125,7 @@ def test_parse_yaml_accepts_complete_valid_er_document() -> None:
             {
                 "valuelistname": "Grade",
                 "values": ["A", "B", "C"],
-                "many_to_one_from_entities": [{"entityname": "Enrollment"}],
+                "many_to_one_from_entities": [{"sourceentity": "Enrollment"}],
             }
         ],
     }
@@ -146,8 +146,8 @@ def test_parse_yaml_allows_omitted_optional_er_fields() -> None:
         relationships:
         - relationshipname: Knows
           entities:
-          - entityname: Student
-          - entityname: Teacher
+          - targetentity: Student
+          - targetentity: Teacher
         inheritances:
         - superentity: Person
           subentities:
@@ -176,7 +176,7 @@ def test_parse_yaml_allows_omitted_optional_er_fields() -> None:
         "relationships": [
             {
                 "relationshipname": "Knows",
-                "entities": [{"entityname": "Student"}, {"entityname": "Teacher"}],
+                "entities": [{"targetentity": "Student"}, {"targetentity": "Teacher"}],
             }
         ],
         "inheritances": [{"superentity": "Person", "subentities": ["Student"]}],
@@ -280,9 +280,9 @@ def test_parse_yaml_rejects_invalid_cardinality() -> None:
         relationships:
         - relationshipname: Advises
           entities:
-          - entityname: Teacher
+          - targetentity: Teacher
             cardinality: ZERO_OR_ONE
-          - entityname: Student
+          - targetentity: Student
             cardinality: MANY
         """
     )
@@ -320,7 +320,7 @@ def test_parse_yaml_reports_malformed_yaml_with_fix() -> None:
         relationships:
         - relationshipname: Advises
           entities:
-            - entityname: Teacher
+            - targetentity: Teacher
              cardinality: ONE
         """
     )

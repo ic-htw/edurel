@@ -317,7 +317,7 @@ class ERAstFactory:
     @staticmethod
     def create_relationship_entity(data: dict) -> RelationshipEntity:
         return RelationshipEntity(
-            entityname=data["entityname"],
+            entityname=data["targetentity"],
             role=data.get("role"),
             cardinality=data.get("cardinality"),
         )
@@ -346,7 +346,7 @@ class ERAstFactory:
 
     @staticmethod
     def create_many_to_one_entity(data: dict) -> ManyToOneEntity:
-        return ManyToOneEntity(entityname=data["entityname"])
+        return ManyToOneEntity(entityname=data["sourceentity"])
 
     @classmethod
     def create_valuelist(cls, data: dict) -> ValueList:
@@ -358,3 +358,277 @@ class ERAstFactory:
                 for entity in data.get("many_to_one_from_entities", [])
             ],
         )
+
+def validate_ast(er_schema: ERSchema) -> None:
+    errors: list[str] = []
+
+    def find_duplicates(values: list[str]) -> list[str]:
+        seen: set[str] = set()
+        duplicates = {
+            value for value in values if value in seen or seen.add(value)
+        }
+        return sorted(duplicates)
+
+    entity_names = [entity.entityname for entity in er_schema.entities]
+    for entityname in find_duplicates(entity_names):
+        errors.append(f"Duplicate entityname '{entityname}'.")
+
+    association_names = [
+        associative_entity.associationname
+        for associative_entity in er_schema.associative_entities
+    ]
+    for associationname in find_duplicates(association_names):
+        errors.append(f"Duplicate associationname '{associationname}'.")
+
+    relationship_names = [
+        relationship.relationshipname for relationship in er_schema.relationships
+    ]
+    for relationshipname in find_duplicates(relationship_names):
+        errors.append(f"Duplicate relationshipname '{relationshipname}'.")
+
+    superentities = [
+        inheritance.superentity for inheritance in er_schema.inheritances
+    ]
+    for superentity in find_duplicates(superentities):
+        errors.append(f"Duplicate superentity '{superentity}'.")
+
+    valuelist_names = [valuelist.valuelistname for valuelist in er_schema.valuelists]
+    for valuelistname in find_duplicates(valuelist_names):
+        errors.append(f"Duplicate valuelistname '{valuelistname}'.")
+
+    entity_names_set = set(entity_names)
+    association_names_set = set(association_names)
+    valuelist_names_set = set(valuelist_names)
+    known_structure_targets = entity_names_set | association_names_set
+    known_targetentities = known_structure_targets | valuelist_names_set
+
+    for shared_name in sorted(entity_names_set & association_names_set):
+        errors.append(
+            f"Name '{shared_name}' must not be used as both entityname and associationname."
+        )
+    for shared_name in sorted(entity_names_set & valuelist_names_set):
+        errors.append(
+            f"Name '{shared_name}' must not be used as both entityname and valuelistname."
+        )
+    for shared_name in sorted(association_names_set & valuelist_names_set):
+        errors.append(
+            f"Name '{shared_name}' must not be used as both associationname and valuelistname."
+        )
+
+    all_subentities = [
+        subentity
+        for inheritance in er_schema.inheritances
+        for subentity in inheritance.subentities
+    ]
+    subentity_set = set(all_subentities)
+
+    for entity in er_schema.entities:
+        attribute_names = [
+            attribute.attributename for attribute in entity.attributes
+        ]
+        for attributename in find_duplicates(attribute_names):
+            errors.append(
+                f"Entity '{entity.entityname}' has duplicate attributename "
+                f"'{attributename}'."
+            )
+
+        if entity.entityname in subentity_set:
+            if entity.key is not None:
+                errors.append(
+                    f"Entity '{entity.entityname}' is a subentity and must not have a key."
+                )
+        elif entity.key is None:
+            errors.append(
+                f"Entity '{entity.entityname}' is not a subentity and must have a key."
+            )
+
+    for associative_entity in er_schema.associative_entities:
+        attribute_names = [
+            attribute.attributename for attribute in associative_entity.attributes
+        ]
+        for attributename in find_duplicates(attribute_names):
+            errors.append(
+                f"Associative entity '{associative_entity.associationname}' has "
+                f"duplicate attributename '{attributename}'."
+            )
+
+        if associative_entity.associationname in subentity_set:
+            if associative_entity.identification is not None:
+                errors.append(
+                    f"Associative entity '{associative_entity.associationname}' is a "
+                    f"subentity and must not have an identification section."
+                )
+        elif associative_entity.identification is None:
+            errors.append(
+                f"Associative entity '{associative_entity.associationname}' is not a "
+                f"subentity and must have an identification section."
+            )
+
+        identification_targets: list[str] = []
+        if associative_entity.identification is not None:
+            if (
+                associative_entity.identification.localkey is None
+                and not associative_entity.identification.global_keys
+            ):
+                errors.append(
+                    f"Associative entity '{associative_entity.associationname}' "
+                    f"identification_schema must define localkey or global."
+                )
+
+            identification_targets = [
+                global_key.targetentity
+                for global_key in associative_entity.identification.global_keys
+            ]
+            for targetentity in identification_targets:
+                if targetentity not in known_targetentities:
+                    errors.append(
+                        f"Associative entity '{associative_entity.associationname}' "
+                        f"identification targetentity '{targetentity}' does not exist "
+                        f"as entityname, associationname, or valuelistname."
+                    )
+
+        association_targets = [
+            association.targetentity for association in associative_entity.associations
+        ]
+        for targetentity in association_targets:
+            if targetentity not in known_targetentities:
+                errors.append(
+                    f"Associative entity '{associative_entity.associationname}' "
+                    f"association targetentity '{targetentity}' does not exist as "
+                    f"entityname, associationname, or valuelistname."
+                )
+
+        for targetentity in sorted(set(identification_targets) & set(association_targets)):
+            errors.append(
+                f"Associative entity '{associative_entity.associationname}' "
+                f"targetentity '{targetentity}' must not appear in both "
+                f"identification_schema and association_schema."
+            )
+
+    for relationship in er_schema.relationships:
+        attribute_names = [
+            attribute.attributename for attribute in relationship.attributes
+        ]
+        for attributename in find_duplicates(attribute_names):
+            errors.append(
+                f"Relationship '{relationship.relationshipname}' has duplicate "
+                f"attributename '{attributename}'."
+            )
+
+        if len(relationship.entities) != 2:
+            errors.append(
+                f"Relationship '{relationship.relationshipname}' must have exactly "
+                f"two entities."
+            )
+
+        for participant in relationship.entities:
+            if participant.entityname not in known_targetentities:
+                errors.append(
+                    f"Relationship '{relationship.relationshipname}' targetentity "
+                    f"'{participant.entityname}' does not exist as entityname or "
+                    f"associationname or valuelistname."
+                )
+
+    for inheritance in er_schema.inheritances:
+        for subentity in find_duplicates(list(inheritance.subentities)):
+            errors.append(
+                f"Inheritance superentity '{inheritance.superentity}' has duplicate "
+                f"subentity '{subentity}'."
+            )
+
+        if inheritance.superentity not in known_structure_targets:
+            errors.append(
+                f"Inheritance superentity '{inheritance.superentity}' does not exist "
+                f"as entityname or associationname."
+            )
+
+        for subentity in inheritance.subentities:
+            if subentity not in known_structure_targets:
+                errors.append(
+                    f"Inheritance subentity '{subentity}' does not exist as "
+                    f"entityname or associationname."
+                )
+            elif (
+                inheritance.superentity in association_names_set
+                and subentity not in association_names_set
+            ):
+                errors.append(
+                    f"Inheritance superentity '{inheritance.superentity}' is an "
+                    f"associative entity, so subentity '{subentity}' must also be an "
+                    f"associative entity."
+                )
+
+    superentities_by_subentity: dict[str, set[str]] = {}
+    for inheritance in er_schema.inheritances:
+        for subentity in inheritance.subentities:
+            superentities_by_subentity.setdefault(subentity, set()).add(
+                inheritance.superentity
+            )
+
+    for subentity, subentity_superentities in sorted(superentities_by_subentity.items()):
+        if len(subentity_superentities) > 1:
+            superentities_str = ", ".join(sorted(subentity_superentities))
+            errors.append(
+                f"Subentity '{subentity}' cannot have multiple superentities: "
+                f"{superentities_str}."
+            )
+
+    for valuelist in er_schema.valuelists:
+        for value in find_duplicates(list(valuelist.values)):
+            errors.append(
+                f"Valuelist '{valuelist.valuelistname}' has duplicate value '{value}'."
+            )
+
+        sourceentities = [
+            source_entity.entityname
+            for source_entity in valuelist.many_to_one_from_entities
+        ]
+        for sourceentity in find_duplicates(sourceentities):
+            errors.append(
+                f"Valuelist '{valuelist.valuelistname}' has duplicate sourceentity "
+                f"'{sourceentity}'."
+            )
+
+        for sourceentity in sourceentities:
+            if sourceentity not in known_structure_targets:
+                errors.append(
+                    f"Valuelist '{valuelist.valuelistname}' sourceentity "
+                    f"'{sourceentity}' does not exist as entityname or associationname."
+                )
+
+    inheritance_graph: dict[str, list[str]] = {}
+    for inheritance in er_schema.inheritances:
+        inheritance_graph.setdefault(inheritance.superentity, []).extend(
+            inheritance.subentities
+        )
+
+    visit_state: dict[str, str] = {}
+    path: list[str] = []
+    reported_cycles: set[frozenset[str]] = set()
+
+    def visit(node: str) -> None:
+        visit_state[node] = "visiting"
+        path.append(node)
+        for subentity in inheritance_graph.get(node, []):
+            subentity_state = visit_state.get(subentity)
+            if subentity_state == "visiting":
+                cycle_nodes = frozenset(path[path.index(subentity):])
+                if cycle_nodes not in reported_cycles:
+                    reported_cycles.add(cycle_nodes)
+                    errors.append(
+                        f"Inheritance cycle detected involving '{subentity}'."
+                    )
+                continue
+            if subentity_state == "visited":
+                continue
+            visit(subentity)
+        path.pop()
+        visit_state[node] = "visited"
+
+    for node in sorted(inheritance_graph):
+        if visit_state.get(node) is None:
+            visit(node)
+
+    if errors:
+        joined_errors = "\n".join(f"- {error}" for error in errors)
+        raise ValueError(f"AST validation failed:\n{joined_errors}")

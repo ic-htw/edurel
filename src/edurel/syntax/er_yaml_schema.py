@@ -56,7 +56,7 @@ associative_entity_schema = Map(
 
 relationship_participant_schema = Map(
     {
-        "entityname": Str(),
+        "targetentity": Str(),
         Optional("role"): Str(),
         Optional("cardinality"): CARDINALITY,
     }
@@ -80,7 +80,7 @@ inheritance_schema = Map(
 
 many_to_one_entity_schema = Map(
     {
-        "entityname": Str(),
+        "sourceentity": Str(),
     }
 )
 
