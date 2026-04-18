@@ -247,9 +247,9 @@ def test_sql_translation_builder_generates_datalist_insert_statements() -> None:
         "  SortOrder INTEGER NOT NULL,\n"
         "  PRIMARY KEY (ID)\n"
         ");\n"
-        "INSERT INTO status_codes (ID, Description, IsValid, SortOrder) VALUES (1, 'Open', TRUE, 1);\n"
-        "INSERT INTO status_codes (ID, Description, IsValid, SortOrder) VALUES (2, 'Closed', TRUE, 2);\n"
-        "INSERT INTO status_codes (ID, Description, IsValid, SortOrder) VALUES (3, 'Owner''s Review', TRUE, 3);"
+        "INSERT INTO status_codes (ID, Description, IsValid, SortOrder) VALUES (1, 'Open', 1, 1);\n"
+        "INSERT INTO status_codes (ID, Description, IsValid, SortOrder) VALUES (2, 'Closed', 1, 2);\n"
+        "INSERT INTO status_codes (ID, Description, IsValid, SortOrder) VALUES (3, 'Owner''s Review', 1, 3);"
     )
 
 
@@ -283,6 +283,6 @@ def test_sql_inline_translation_builder_generates_datalist_insert_statements() -
         "  SortOrder INTEGER NOT NULL,\n"
         "  PRIMARY KEY (ID)\n"
         ");\n"
-        "INSERT INTO status_codes (ID, Description, IsValid, SortOrder) VALUES (1, 'Open', TRUE, 1);\n"
-        "INSERT INTO status_codes (ID, Description, IsValid, SortOrder) VALUES (2, 'Closed', TRUE, 2);"
+        "INSERT INTO status_codes (ID, Description, IsValid, SortOrder) VALUES (1, 'Open', 1, 1);\n"
+        "INSERT INTO status_codes (ID, Description, IsValid, SortOrder) VALUES (2, 'Closed', 1, 2);"
     )

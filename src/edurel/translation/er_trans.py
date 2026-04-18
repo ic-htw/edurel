@@ -15,6 +15,7 @@ from edurel.syntax.er_ast import (
     RelationshipEntity,
     ValueList,
 )
+from edurel.syntax.rel_ast import Column, DataList, ForeignKey, RelSchema, Table
 
 
 class ERSchemaTranslationBuilder(ABC):
@@ -766,3 +767,470 @@ class MermaidClassDiagramTranslationBuilder(ERSchemaTranslationBuilder):
             f'    {source} "0..*" -- "{_mermaid_cardinality(target_cardinality)}" '
             f"{target} : {label}"
         )
+
+
+class RelAstTranslationBuilder(ERSchemaTranslationBuilder):
+    def __init__(self) -> None:
+        self.entity_tables: list[Table] = []
+        self.associative_tables: list[Table] = []
+        self.relationship_tables: list[Table] = []
+        self.datalists: list[DataList] = []
+        self.tables_by_name: dict[str, Table] = {}
+        self.entities_by_name: dict[str, Entity] = {}
+        self.associative_entities_by_name: dict[str, AssociativeEntity] = {}
+        self.subentity_to_superentity: dict[str, str] = {}
+        self.valuelist_names: set[str] = set()
+        self.structure_primary_keys: dict[str, list[Column]] = {}
+        self.current_table: Table | None = None
+        self.pending_associative_foreign_keys: list[ForeignKey] = []
+        self.pending_associative_columns: list[Column] = []
+        self.current_relationship_entities: list[RelationshipEntity] = []
+        self.current_relationship_attributes: list[Attribute] = []
+
+    def start_schema(self, er_schema: ERSchema) -> None:
+        self.entity_tables = []
+        self.associative_tables = []
+        self.relationship_tables = []
+        self.datalists = []
+        self.tables_by_name = {}
+        self.entities_by_name = {
+            entity.entityname: entity for entity in er_schema.entities
+        }
+        self.associative_entities_by_name = {
+            associative_entity.associationname: associative_entity
+            for associative_entity in er_schema.associative_entities
+        }
+        self.subentity_to_superentity = {
+            subentity: inheritance.superentity
+            for inheritance in er_schema.inheritances
+            for subentity in inheritance.subentities
+        }
+        self.valuelist_names = {
+            valuelist.valuelistname for valuelist in er_schema.valuelists
+        }
+        self.structure_primary_keys = {}
+        for structure_name in (
+            list(self.entities_by_name) + list(self.associative_entities_by_name)
+        ):
+            self._resolve_primary_key_columns(structure_name)
+        self.current_table = None
+        self.pending_associative_foreign_keys = []
+        self.pending_associative_columns = []
+        self.current_relationship_entities = []
+        self.current_relationship_attributes = []
+
+    def end_schema(self, er_schema: ERSchema) -> None:
+        return None
+
+    def start_entity(self, entity: Entity) -> None:
+        table = Table(tablename=entity.entityname)
+        if entity.entityname in self.subentity_to_superentity:
+            self._add_primary_key_columns(
+                table,
+                self._resolve_primary_key_columns(entity.entityname),
+            )
+        self.current_table = table
+
+    def add_entity_key(self, entity: Entity) -> None:
+        assert self.current_table is not None
+        key_columns = self._resolve_primary_key_columns(entity.entityname)
+        if entity.entityname not in self.subentity_to_superentity:
+            self._add_primary_key_columns(self.current_table, key_columns)
+
+    def add_entity_attribute(self, entity: Entity, attribute: Attribute) -> None:
+        assert self.current_table is not None
+        self.current_table.columns.append(
+            Column(
+                columnname=attribute.attributename,
+                type=attribute.type,
+                nullable=attribute.nullable,
+            )
+        )
+
+    def end_entity(self, entity: Entity) -> None:
+        assert self.current_table is not None
+        self._register_table(self.current_table, self.entity_tables)
+        self.current_table = None
+
+    def start_associative_entity(self, associative_entity: AssociativeEntity) -> None:
+        table = Table(tablename=associative_entity.associationname)
+        if associative_entity.associationname in self.subentity_to_superentity:
+            self._add_primary_key_columns(
+                table,
+                self._resolve_primary_key_columns(associative_entity.associationname),
+            )
+        self.current_table = table
+        self.pending_associative_foreign_keys = []
+        self.pending_associative_columns = []
+
+    def start_identification(self, identification: Identification) -> None:
+        assert self.current_table is not None
+        if identification.localkey is not None:
+            self._add_primary_key_columns(
+                self.current_table,
+                [
+                    Column(
+                        columnname=identification.localkey,
+                        type=_member_type(identification.keytype),
+                    )
+                ],
+            )
+
+    def add_global_key(
+        self, identification: Identification, global_key: GlobalKey
+    ) -> None:
+        assert self.current_table is not None
+        source_columns, target_columns = self._foreign_key_columns_for_target(
+            global_key.targetentity,
+            global_key.role,
+        )
+        self._add_primary_key_columns(self.current_table, source_columns)
+        label = global_key.role or global_key.targetentity
+        self._add_foreign_key(
+            self.current_table,
+            ForeignKey(
+                fkname=f"fk_{self.current_table.tablename}_{label}",
+                sourcecolumns=[column.columnname for column in source_columns],
+                targettable=global_key.targetentity,
+                targetcolumns=target_columns,
+            ),
+        )
+
+    def end_identification(self, identification: Identification) -> None:
+        return None
+
+    def add_association(
+        self, associative_entity: AssociativeEntity, association: Association
+    ) -> None:
+        assert self.current_table is not None
+        if association.targetentity in self.valuelist_names:
+            self._add_valuelist_foreign_key(
+                associative_entity.associationname,
+                association.targetentity,
+            )
+            return
+
+        source_columns, target_columns = self._foreign_key_columns_for_target(
+            association.targetentity,
+            association.role,
+        )
+        for column in source_columns:
+            self.pending_associative_columns.append(self._clone_column(column))
+        label = association.role or association.targetentity
+        self.pending_associative_foreign_keys.append(
+            ForeignKey(
+                fkname=f"fk_{associative_entity.associationname}_{label}_assoc",
+                sourcecolumns=[column.columnname for column in source_columns],
+                targettable=association.targetentity,
+                targetcolumns=target_columns,
+            )
+        )
+
+    def add_associative_entity_attribute(
+        self, associative_entity: AssociativeEntity, attribute: Attribute
+    ) -> None:
+        assert self.current_table is not None
+        self.current_table.columns.append(
+            Column(
+                columnname=attribute.attributename,
+                type=attribute.type,
+                nullable=attribute.nullable,
+            )
+        )
+
+    def end_associative_entity(self, associative_entity: AssociativeEntity) -> None:
+        assert self.current_table is not None
+        self._add_columns(self.current_table, self.pending_associative_columns)
+        for foreign_key in self.pending_associative_foreign_keys:
+            self._add_foreign_key(self.current_table, foreign_key)
+        self._register_table(self.current_table, self.associative_tables)
+        self.current_table = None
+        self.pending_associative_foreign_keys = []
+        self.pending_associative_columns = []
+
+    def start_relationship(self, relationship: Relationship) -> None:
+        self.current_relationship_entities = []
+        self.current_relationship_attributes = []
+
+    def add_relationship_entity(
+        self, relationship: Relationship, entity: RelationshipEntity
+    ) -> None:
+        self.current_relationship_entities.append(entity)
+
+    def add_relationship_attribute(
+        self, relationship: Relationship, attribute: Attribute
+    ) -> None:
+        self.current_relationship_attributes.append(attribute)
+
+    def end_relationship(self, relationship: Relationship) -> None:
+        if len(self.current_relationship_entities) != 2:
+            self.current_relationship_entities = []
+            self.current_relationship_attributes = []
+            return
+
+        left_entity, right_entity = self.current_relationship_entities
+        if (
+            not self.current_relationship_attributes
+            and self._is_many_cardinality(left_entity.cardinality)
+            and not self._is_many_cardinality(right_entity.cardinality)
+        ):
+            self._add_relationship_foreign_key(source=left_entity, target=right_entity, relationshipname=relationship.relationshipname)
+        elif (
+            not self.current_relationship_attributes
+            and self._is_many_cardinality(right_entity.cardinality)
+            and not self._is_many_cardinality(left_entity.cardinality)
+        ):
+            self._add_relationship_foreign_key(source=right_entity, target=left_entity, relationshipname=relationship.relationshipname)
+        else:
+            bridge_table = Table(tablename=relationship.relationshipname)
+            for entity in self.current_relationship_entities:
+                source_columns, target_columns = self._foreign_key_columns_for_target(
+                    entity.entityname,
+                    entity.role,
+                )
+                self._add_primary_key_columns(bridge_table, source_columns)
+                label = entity.role or entity.entityname
+                self._add_foreign_key(
+                    bridge_table,
+                    ForeignKey(
+                        fkname=f"fk_{relationship.relationshipname}_{label}",
+                        sourcecolumns=[column.columnname for column in source_columns],
+                        targettable=entity.entityname,
+                        targetcolumns=target_columns,
+                    ),
+                )
+            for attribute in self.current_relationship_attributes:
+                bridge_table.columns.append(
+                    Column(
+                        columnname=attribute.attributename,
+                        type=attribute.type,
+                        nullable=attribute.nullable,
+                    )
+                )
+            self._register_table(bridge_table, self.relationship_tables)
+
+        self.current_relationship_entities = []
+        self.current_relationship_attributes = []
+
+    def add_inheritance(self, inheritance: Inheritance) -> None:
+        super_primary_key = self._resolve_primary_key_columns(inheritance.superentity)
+        for subentity in inheritance.subentities:
+            subentity_table = self.tables_by_name[subentity]
+            self._add_foreign_key(
+                subentity_table,
+                ForeignKey(
+                    fkname=f"fk_{subentity}_{inheritance.superentity}",
+                    sourcecolumns=[column.columnname for column in super_primary_key],
+                    targettable=inheritance.superentity,
+                    targetcolumns=[column.columnname for column in super_primary_key],
+                ),
+            )
+
+    def start_valuelist(self, valuelist: ValueList) -> None:
+        valuelist_table = Table(
+            tablename=valuelist.valuelistname,
+            columns=[
+                Column(columnname="ID", type="INTEGER"),
+                Column(columnname="Description", type="TEXT"),
+                Column(columnname="IsValid", type="INTEGER"),
+                Column(columnname="SortOrder", type="INTEGER"),
+            ],
+            primary_key=["ID"],
+        )
+        self._register_table(valuelist_table, self.entity_tables)
+        self.datalists.append(
+            DataList(tablename=valuelist.valuelistname, values=list(valuelist.values))
+        )
+
+    def add_many_to_one_entity(
+        self, valuelist: ValueList, entity: ManyToOneEntity
+    ) -> None:
+        self._add_valuelist_foreign_key(entity.entityname, valuelist.valuelistname)
+
+    def end_valuelist(self, valuelist: ValueList) -> None:
+        return None
+
+    def build(self) -> RelSchema:
+        return RelSchema(
+            tables=self.entity_tables + self.associative_tables + self.relationship_tables,
+            datalists=self.datalists,
+        )
+
+    def _resolve_primary_key_columns(self, structure_name: str) -> list[Column]:
+        existing = self.structure_primary_keys.get(structure_name)
+        if existing is not None:
+            return [self._clone_column(column) for column in existing]
+
+        if structure_name in self.subentity_to_superentity:
+            resolved = self._resolve_primary_key_columns(
+                self.subentity_to_superentity[structure_name]
+            )
+            self.structure_primary_keys[structure_name] = [
+                self._clone_column(column) for column in resolved
+            ]
+            return resolved
+
+        if structure_name in self.entities_by_name:
+            entity = self.entities_by_name[structure_name]
+            resolved = (
+                [
+                    Column(
+                        columnname=entity.key,
+                        type=_member_type(entity.keytype),
+                    )
+                ]
+                if entity.key is not None
+                else []
+            )
+            self.structure_primary_keys[structure_name] = [
+                self._clone_column(column) for column in resolved
+            ]
+            return resolved
+
+        if structure_name in self.associative_entities_by_name:
+            associative_entity = self.associative_entities_by_name[structure_name]
+            resolved: list[Column] = []
+            identification = associative_entity.identification
+            if identification is not None:
+                if identification.localkey is not None:
+                    resolved.append(
+                        Column(
+                            columnname=identification.localkey,
+                            type=_member_type(identification.keytype),
+                        )
+                    )
+                for global_key in identification.global_keys:
+                    foreign_key_columns, _ = self._foreign_key_columns_for_target(
+                        global_key.targetentity,
+                        global_key.role,
+                    )
+                    resolved.extend(foreign_key_columns)
+            self.structure_primary_keys[structure_name] = [
+                self._clone_column(column) for column in resolved
+            ]
+            return resolved
+
+        if structure_name in self.valuelist_names:
+            return [Column(columnname="ID", type="INTEGER")]
+
+        raise KeyError(f"Unknown structure '{structure_name}'.")
+
+    def _foreign_key_columns_for_target(
+        self,
+        target_name: str,
+        role: str | None,
+    ) -> tuple[list[Column], list[str]]:
+        target_primary_key = self._resolve_primary_key_columns(target_name)
+        if len(target_primary_key) == 1:
+            primary_key_column = target_primary_key[0]
+            source_column_name = self._relationship_column_name(
+                role,
+                primary_key_column.columnname,
+            )
+            return (
+                [
+                    Column(
+                        columnname=source_column_name,
+                        type=primary_key_column.type,
+                    )
+                ],
+                [primary_key_column.columnname],
+            )
+        return (
+            [self._clone_column(column) for column in target_primary_key],
+            [column.columnname for column in target_primary_key],
+        )
+
+    def _relationship_column_name(
+        self,
+        role: str | None,
+        target_primary_key_column: str,
+    ) -> str:
+        if role is None:
+            return target_primary_key_column
+        if target_primary_key_column.endswith("ID"):
+            return f"{role}ID"
+        return f"{role}{target_primary_key_column}"
+
+    def _add_relationship_foreign_key(
+        self,
+        source: RelationshipEntity,
+        target: RelationshipEntity,
+        relationshipname: str,
+    ) -> None:
+        source_table = self.tables_by_name[source.entityname]
+        source_columns, target_columns = self._foreign_key_columns_for_target(
+            target.entityname,
+            target.role,
+        )
+        self._add_columns(source_table, source_columns)
+        self._add_foreign_key(
+            source_table,
+            ForeignKey(
+                fkname=f"fk_{relationshipname}",
+                sourcecolumns=[column.columnname for column in source_columns],
+                targettable=target.entityname,
+                targetcolumns=target_columns,
+            ),
+        )
+
+    def _add_valuelist_foreign_key(self, source_name: str, valuelistname: str) -> None:
+        source_table = self.tables_by_name[source_name]
+        column_name = f"{valuelistname}ID"
+        self._add_columns(source_table, [Column(columnname=column_name, type="INTEGER")])
+        self._add_foreign_key(
+            source_table,
+            ForeignKey(
+                fkname=f"fk_{source_name}_{valuelistname}",
+                sourcecolumns=[column_name],
+                targettable=valuelistname,
+                targetcolumns=["ID"],
+            ),
+        )
+
+    def _register_table(self, table: Table, table_list: list[Table]) -> None:
+        self.tables_by_name[table.tablename] = table
+        table_list.append(table)
+
+    def _add_primary_key_columns(self, table: Table, columns: list[Column]) -> None:
+        self._add_columns(table, columns)
+        for column in columns:
+            if column.columnname not in table.primary_key:
+                table.primary_key.append(column.columnname)
+
+    def _add_columns(self, table: Table, columns: list[Column]) -> None:
+        known_columns = {column.columnname for column in table.columns}
+        for column in columns:
+            if column.columnname in known_columns:
+                continue
+            table.columns.append(self._clone_column(column))
+            known_columns.add(column.columnname)
+
+    def _add_foreign_key(self, table: Table, foreign_key: ForeignKey) -> None:
+        for existing_foreign_key in table.foreign_keys:
+            if (
+                existing_foreign_key.sourcecolumns == foreign_key.sourcecolumns
+                and existing_foreign_key.targettable == foreign_key.targettable
+                and existing_foreign_key.targetcolumns == foreign_key.targetcolumns
+            ):
+                return
+        table.foreign_keys.append(foreign_key)
+
+    @staticmethod
+    def _clone_column(column: Column) -> Column:
+        return Column(
+            columnname=column.columnname,
+            type=column.type,
+            nullable=column.nullable,
+        )
+
+    @staticmethod
+    def _is_many_cardinality(cardinality: str | None) -> bool:
+        return cardinality in {"MANY", "OPTIONAL_MANY"}
+
+
+def translate_er_ast_to_rel_ast(er_schema: ERSchema) -> RelSchema:
+    builder = RelAstTranslationBuilder()
+    visitor = ERSchemaTranslationVisitor(builder)
+    visitor.visit(er_schema)
+    return builder.build()

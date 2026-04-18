@@ -17,11 +17,15 @@ from edurel.syntax.er_ast import (
     ValueList,
 )
 from edurel.syntax.er_yaml_schema import schema
+from edurel.syntax.rel_ast import RelAstFactory
+from edurel.syntax.rel_yaml_schema import schema as rel_schema
 from edurel.translation.er_trans import (
     ERSchemaTranslationBuilder,
     ERSchemaTranslationVisitor,
     MermaidClassDiagramTranslationBuilder,
+    RelAstTranslationBuilder,
     YamlTranslationBuilder,
+    translate_er_ast_to_rel_ast,
 )
 from edurel.utils.yaml import parse_yaml
 
@@ -786,3 +790,962 @@ def test_mermaid_global_key_uses_role_when_present() -> None:
             classDef entityStyle fill:#d0d0d0,stroke:#333,stroke-width:2px
         """
     ).strip()
+
+
+def test_rel_ast_translation_builder_defaults_missing_keytype_to_integer() -> None:
+    er_schema = ERSchema(
+        entities=[
+            Entity(
+                entityname="Author",
+                key="AuthorID",
+                attributes=[Attribute(attributename="Name", type="TEXT")],
+            )
+        ],
+        associative_entities=[
+            AssociativeEntity(
+                associationname="Authorship",
+                identification=Identification(
+                    localkey="AuthorshipID",
+                    global_keys=[GlobalKey(targetentity="Author", role="Writer")],
+                ),
+            )
+        ],
+    )
+
+    assert translate_er_ast_to_rel_ast(er_schema) == RelAstFactory.create_schema(
+        {
+            "tables": [
+                {
+                    "tablename": "Author",
+                    "columns": [
+                        {"columnname": "AuthorID", "type": "INTEGER"},
+                        {"columnname": "Name", "type": "TEXT"},
+                    ],
+                    "primary_key": ["AuthorID"],
+                },
+                {
+                    "tablename": "Authorship",
+                    "columns": [
+                        {"columnname": "AuthorshipID", "type": "INTEGER"},
+                        {"columnname": "WriterID", "type": "INTEGER"},
+                    ],
+                    "primary_key": ["AuthorshipID", "WriterID"],
+                    "foreign_keys": [
+                        {
+                            "sourcecolumns": ["WriterID"],
+                            "targettable": "Author",
+                            "targetcolumns": ["AuthorID"],
+                            "fkname": "fk_Authorship_Writer",
+                        }
+                    ],
+                },
+            ]
+        }
+    )
+
+
+def test_rel_ast_translation_builder_creates_bridge_table_for_many_to_many_relationship() -> None:
+    er_schema = ERSchema(
+        entities=[
+            Entity(entityname="Student", key="StudentID", keytype="INTEGER"),
+            Entity(entityname="Course", key="CourseID", keytype="INTEGER"),
+        ],
+        relationships=[
+            Relationship(
+                relationshipname="Enrollment",
+                entities=[
+                    RelationshipEntity(
+                        entityname="Student",
+                        role="Participant",
+                        cardinality="MANY",
+                    ),
+                    RelationshipEntity(
+                        entityname="Course",
+                        role="Offering",
+                        cardinality="MANY",
+                    ),
+                ],
+                attributes=[Attribute(attributename="EnrolledOn", type="DATE")],
+            )
+        ],
+    )
+
+    builder = RelAstTranslationBuilder()
+    ERSchemaTranslationVisitor(builder).visit(er_schema)
+
+    assert builder.build() == RelAstFactory.create_schema(
+        {
+            "tables": [
+                {
+                    "tablename": "Student",
+                    "columns": [{"columnname": "StudentID", "type": "INTEGER"}],
+                    "primary_key": ["StudentID"],
+                },
+                {
+                    "tablename": "Course",
+                    "columns": [{"columnname": "CourseID", "type": "INTEGER"}],
+                    "primary_key": ["CourseID"],
+                },
+                {
+                    "tablename": "Enrollment",
+                    "columns": [
+                        {"columnname": "ParticipantID", "type": "INTEGER"},
+                        {"columnname": "OfferingID", "type": "INTEGER"},
+                        {"columnname": "EnrolledOn", "type": "DATE"},
+                    ],
+                    "primary_key": ["ParticipantID", "OfferingID"],
+                    "foreign_keys": [
+                        {
+                            "sourcecolumns": ["ParticipantID"],
+                            "targettable": "Student",
+                            "targetcolumns": ["StudentID"],
+                            "fkname": "fk_Enrollment_Participant",
+                        },
+                        {
+                            "sourcecolumns": ["OfferingID"],
+                            "targettable": "Course",
+                            "targetcolumns": ["CourseID"],
+                            "fkname": "fk_Enrollment_Offering",
+                        },
+                    ],
+                },
+            ]
+        }
+    )
+
+
+def test_rel_ast_translation_builder_translates_library_er_schema_to_expected_rel_ast() -> None:
+    er_yaml = dedent(
+        """
+        entities:
+        - entityname: Book
+          key: BookID
+          keytype: INTEGER
+          attributes:
+          - attributename: ISBN
+            type: TEXT
+          - attributename: Title
+            type: TEXT
+          - attributename: PublicationYear
+            type: INTEGER
+
+        - entityname: Member
+          key: MemberID
+          keytype: INTEGER
+          attributes:
+          - attributename: FirstName
+            type: TEXT
+          - attributename: LastName
+            type: TEXT
+          - attributename: Email
+            type: TEXT
+          - attributename: Phone
+            type: TEXT
+            nullable: true
+          - attributename: MembershipDate
+            type: DATE
+
+        - entityname: Student
+          attributes:
+          - attributename: StudentNumber
+            type: TEXT
+          - attributename: EnrollmentYear
+            type: INTEGER
+          - attributename: Program
+            type: TEXT
+
+        - entityname: Faculty
+          attributes:
+          - attributename: FacultyNumber
+            type: TEXT
+          - attributename: Department
+            type: TEXT
+          - attributename: Rank
+            type: TEXT
+
+        - entityname: Staff
+          attributes:
+          - attributename: StaffNumber
+            type: TEXT
+          - attributename: Position
+            type: TEXT
+          - attributename: HireDate
+            type: DATE
+
+        - entityname: Author
+          key: AuthorID
+          keytype: INTEGER
+          attributes:
+          - attributename: FirstName
+            type: TEXT
+          - attributename: LastName
+            type: TEXT
+          - attributename: Biography
+            type: TEXT
+            nullable: true
+
+        - entityname: Publisher
+          key: PublisherID
+          keytype: INTEGER
+          attributes:
+          - attributename: Name
+            type: TEXT
+          - attributename: Address
+            type: TEXT
+            nullable: true
+          - attributename: Website
+            type: TEXT
+            nullable: true
+
+        - entityname: LibraryBranch
+          key: LibraryBranchID
+          keytype: INTEGER
+          attributes:
+          - attributename: Name
+            type: TEXT
+          - attributename: Address
+            type: TEXT
+          - attributename: Phone
+            type: TEXT
+
+        - entityname: Subject
+          key: SubjectID
+          keytype: INTEGER
+          attributes:
+          - attributename: Name
+            type: TEXT
+          - attributename: Description
+            type: TEXT
+            nullable: true
+
+        associative_entities:
+        - associationname: BookCopy
+          identification:
+            localkey: BookCopyID
+            keytype: INTEGER
+            global:
+            - targetentity: Book
+              role: Book
+          associations:
+          - targetentity: LibraryBranch
+            role: HousingBranch
+            cardinality: ONE
+          attributes:
+          - attributename: Barcode
+            type: TEXT
+          - attributename: AcquisitionDate
+            type: DATE
+
+        - associationname: Loan
+          identification:
+            localkey: LoanID
+            keytype: INTEGER
+          associations:
+          - targetentity: BookCopy
+            role: BorrowedCopy
+            cardinality: ONE
+          - targetentity: Member
+            role: Borrower
+            cardinality: ONE
+          attributes:
+          - attributename: CheckoutDate
+            type: DATE
+          - attributename: DueDate
+            type: DATE
+          - attributename: ReturnDate
+            type: DATE
+            nullable: true
+          - attributename: RenewalCount
+            type: INTEGER
+
+        - associationname: Reservation
+          identification:
+            localkey: ReservationID
+            keytype: INTEGER
+          associations:
+          - targetentity: Book
+            role: ReservedBook
+            cardinality: ONE
+          - targetentity: Member
+            role: Requester
+            cardinality: ONE
+          attributes:
+          - attributename: ReservationDate
+            type: DATE
+          - attributename: ExpirationDate
+            type: DATE
+          - attributename: NotificationDate
+            type: DATE
+            nullable: true
+
+        - associationname: Fine
+          identification:
+            localkey: FineID
+            keytype: INTEGER
+          associations:
+          - targetentity: Loan
+            role: OverdueLoan
+            cardinality: ONE
+          - targetentity: Member
+            role: FinedMember
+            cardinality: ONE
+          attributes:
+          - attributename: Amount
+            type: DECIMAL
+          - attributename: AssessmentDate
+            type: DATE
+          - attributename: PaymentDate
+            type: DATE
+            nullable: true
+          - attributename: Reason
+            type: TEXT
+
+        - associationname: BookAuthorship
+          identification:
+            global:
+            - targetentity: Book
+              role: AuthoredBook
+            - targetentity: Author
+              role: BookAuthor
+          attributes:
+          - attributename: AuthorOrder
+            type: INTEGER
+
+        - associationname: BookSubject
+          identification:
+            global:
+            - targetentity: Book
+              role: ClassifiedBook
+            - targetentity: Subject
+              role: Classification
+          attributes:
+          - attributename: IsPrimary
+            type: INTEGER
+
+        relationships:
+        - relationshipname: BookPublisher
+          entities:
+          - targetentity: Book
+            role: PublishedBook
+            cardinality: MANY
+          - targetentity: Publisher
+            role: BookPublisher
+            cardinality: ONE
+
+        - relationshipname: MemberHomeBranch
+          entities:
+          - targetentity: Member
+            role: BranchMember
+            cardinality: MANY
+          - targetentity: LibraryBranch
+            role: HomeBranch
+            cardinality: ONE
+
+        inheritances:
+        - superentity: Member
+          subentities:
+          - Student
+          - Faculty
+          - Staff
+
+        valuelists:
+        - valuelistname: LoanStatus
+          values:
+          - Active
+          - Returned
+          - Overdue
+          - Lost
+          - Renewed
+          many_to_one_from_entities:
+          - sourceentity: Loan
+
+        - valuelistname: CopyCondition
+          values:
+          - New
+          - Good
+          - Fair
+          - Poor
+          - Damaged
+          - Withdrawn
+          many_to_one_from_entities:
+          - sourceentity: BookCopy
+
+        - valuelistname: ReservationStatus
+          values:
+          - Pending
+          - ReadyForPickup
+          - Fulfilled
+          - Cancelled
+          - Expired
+          many_to_one_from_entities:
+          - sourceentity: Reservation
+
+        - valuelistname: MemberStatus
+          values:
+          - Active
+          - Suspended
+          - Expired
+          - Blocked
+          many_to_one_from_entities:
+          - sourceentity: Member
+
+        - valuelistname: FineStatus
+          values:
+          - Outstanding
+          - Paid
+          - Waived
+          - InCollection
+          many_to_one_from_entities:
+          - sourceentity: Fine
+
+        - valuelistname: AuthorRole
+          values:
+          - PrimaryAuthor
+          - CoAuthor
+          - Editor
+          - Translator
+          - Illustrator
+          many_to_one_from_entities:
+          - sourceentity: BookAuthorship
+
+        - valuelistname: MediaFormat
+          values:
+          - Hardcover
+          - Paperback
+          - EBook
+          - Audiobook
+          - DVD
+          - CDROM
+          many_to_one_from_entities:
+          - sourceentity: Book
+        """
+    )
+
+    rel_yaml = dedent(
+        """
+        tables:
+        - tablename: Book
+          columns:
+          - columnname: BookID
+            type: INTEGER
+          - columnname: ISBN
+            type: TEXT
+          - columnname: Title
+            type: TEXT
+          - columnname: PublicationYear
+            type: INTEGER
+          - columnname: BookPublisherID
+            type: INTEGER
+          - columnname: MediaFormatID
+            type: INTEGER
+          primary_key:
+          - BookID
+          foreign_keys:
+          - sourcecolumns:
+            - BookPublisherID
+            targettable: Publisher
+            targetcolumns:
+            - PublisherID
+            fkname: fk_BookPublisher
+          - sourcecolumns:
+            - MediaFormatID
+            targettable: MediaFormat
+            targetcolumns:
+            - ID
+            fkname: fk_Book_MediaFormat
+        - tablename: Member
+          columns:
+          - columnname: MemberID
+            type: INTEGER
+          - columnname: FirstName
+            type: TEXT
+          - columnname: LastName
+            type: TEXT
+          - columnname: Email
+            type: TEXT
+          - columnname: Phone
+            type: TEXT
+            nullable: true
+          - columnname: MembershipDate
+            type: DATE
+          - columnname: HomeBranchID
+            type: INTEGER
+          - columnname: MemberStatusID
+            type: INTEGER
+          primary_key:
+          - MemberID
+          foreign_keys:
+          - sourcecolumns:
+            - HomeBranchID
+            targettable: LibraryBranch
+            targetcolumns:
+            - LibraryBranchID
+            fkname: fk_MemberHomeBranch
+          - sourcecolumns:
+            - MemberStatusID
+            targettable: MemberStatus
+            targetcolumns:
+            - ID
+            fkname: fk_Member_MemberStatus
+        - tablename: Student
+          columns:
+          - columnname: MemberID
+            type: INTEGER
+          - columnname: StudentNumber
+            type: TEXT
+          - columnname: EnrollmentYear
+            type: INTEGER
+          - columnname: Program
+            type: TEXT
+          primary_key:
+          - MemberID
+          foreign_keys:
+          - sourcecolumns:
+            - MemberID
+            targettable: Member
+            targetcolumns:
+            - MemberID
+            fkname: fk_Student_Member
+        - tablename: Faculty
+          columns:
+          - columnname: MemberID
+            type: INTEGER
+          - columnname: FacultyNumber
+            type: TEXT
+          - columnname: Department
+            type: TEXT
+          - columnname: Rank
+            type: TEXT
+          primary_key:
+          - MemberID
+          foreign_keys:
+          - sourcecolumns:
+            - MemberID
+            targettable: Member
+            targetcolumns:
+            - MemberID
+            fkname: fk_Faculty_Member
+        - tablename: Staff
+          columns:
+          - columnname: MemberID
+            type: INTEGER
+          - columnname: StaffNumber
+            type: TEXT
+          - columnname: Position
+            type: TEXT
+          - columnname: HireDate
+            type: DATE
+          primary_key:
+          - MemberID
+          foreign_keys:
+          - sourcecolumns:
+            - MemberID
+            targettable: Member
+            targetcolumns:
+            - MemberID
+            fkname: fk_Staff_Member
+        - tablename: Author
+          columns:
+          - columnname: AuthorID
+            type: INTEGER
+          - columnname: FirstName
+            type: TEXT
+          - columnname: LastName
+            type: TEXT
+          - columnname: Biography
+            type: TEXT
+            nullable: true
+          primary_key:
+          - AuthorID
+        - tablename: Publisher
+          columns:
+          - columnname: PublisherID
+            type: INTEGER
+          - columnname: Name
+            type: TEXT
+          - columnname: Address
+            type: TEXT
+            nullable: true
+          - columnname: Website
+            type: TEXT
+            nullable: true
+          primary_key:
+          - PublisherID
+        - tablename: LibraryBranch
+          columns:
+          - columnname: LibraryBranchID
+            type: INTEGER
+          - columnname: Name
+            type: TEXT
+          - columnname: Address
+            type: TEXT
+          - columnname: Phone
+            type: TEXT
+          primary_key:
+          - LibraryBranchID
+        - tablename: Subject
+          columns:
+          - columnname: SubjectID
+            type: INTEGER
+          - columnname: Name
+            type: TEXT
+          - columnname: Description
+            type: TEXT
+            nullable: true
+          primary_key:
+          - SubjectID
+        - tablename: LoanStatus
+          columns:
+          - columnname: ID
+            type: INTEGER
+          - columnname: Description
+            type: TEXT
+          - columnname: IsValid
+            type: INTEGER
+          - columnname: SortOrder
+            type: INTEGER
+          primary_key:
+          - ID
+        - tablename: CopyCondition
+          columns:
+          - columnname: ID
+            type: INTEGER
+          - columnname: Description
+            type: TEXT
+          - columnname: IsValid
+            type: INTEGER
+          - columnname: SortOrder
+            type: INTEGER
+          primary_key:
+          - ID
+        - tablename: ReservationStatus
+          columns:
+          - columnname: ID
+            type: INTEGER
+          - columnname: Description
+            type: TEXT
+          - columnname: IsValid
+            type: INTEGER
+          - columnname: SortOrder
+            type: INTEGER
+          primary_key:
+          - ID
+        - tablename: MemberStatus
+          columns:
+          - columnname: ID
+            type: INTEGER
+          - columnname: Description
+            type: TEXT
+          - columnname: IsValid
+            type: INTEGER
+          - columnname: SortOrder
+            type: INTEGER
+          primary_key:
+          - ID
+        - tablename: FineStatus
+          columns:
+          - columnname: ID
+            type: INTEGER
+          - columnname: Description
+            type: TEXT
+          - columnname: IsValid
+            type: INTEGER
+          - columnname: SortOrder
+            type: INTEGER
+          primary_key:
+          - ID
+        - tablename: AuthorRole
+          columns:
+          - columnname: ID
+            type: INTEGER
+          - columnname: Description
+            type: TEXT
+          - columnname: IsValid
+            type: INTEGER
+          - columnname: SortOrder
+            type: INTEGER
+          primary_key:
+          - ID
+        - tablename: MediaFormat
+          columns:
+          - columnname: ID
+            type: INTEGER
+          - columnname: Description
+            type: TEXT
+          - columnname: IsValid
+            type: INTEGER
+          - columnname: SortOrder
+            type: INTEGER
+          primary_key:
+          - ID
+        - tablename: BookCopy
+          columns:
+          - columnname: BookCopyID
+            type: INTEGER
+          - columnname: BookID
+            type: INTEGER
+          - columnname: Barcode
+            type: TEXT
+          - columnname: AcquisitionDate
+            type: DATE
+          - columnname: HousingBranchID
+            type: INTEGER
+          - columnname: CopyConditionID
+            type: INTEGER
+          primary_key:
+          - BookCopyID
+          - BookID
+          foreign_keys:
+          - sourcecolumns:
+            - BookID
+            targettable: Book
+            targetcolumns:
+            - BookID
+            fkname: fk_BookCopy_Book
+          - sourcecolumns:
+            - HousingBranchID
+            targettable: LibraryBranch
+            targetcolumns:
+            - LibraryBranchID
+            fkname: fk_BookCopy_HousingBranch_assoc
+          - sourcecolumns:
+            - CopyConditionID
+            targettable: CopyCondition
+            targetcolumns:
+            - ID
+            fkname: fk_BookCopy_CopyCondition
+        - tablename: Loan
+          columns:
+          - columnname: LoanID
+            type: INTEGER
+          - columnname: CheckoutDate
+            type: DATE
+          - columnname: DueDate
+            type: DATE
+          - columnname: ReturnDate
+            type: DATE
+            nullable: true
+          - columnname: RenewalCount
+            type: INTEGER
+          - columnname: BookCopyID
+            type: INTEGER
+          - columnname: BookID
+            type: INTEGER
+          - columnname: BorrowerID
+            type: INTEGER
+          - columnname: LoanStatusID
+            type: INTEGER
+          primary_key:
+          - LoanID
+          foreign_keys:
+          - sourcecolumns:
+            - BookCopyID
+            - BookID
+            targettable: BookCopy
+            targetcolumns:
+            - BookCopyID
+            - BookID
+            fkname: fk_Loan_BorrowedCopy_assoc
+          - sourcecolumns:
+            - BorrowerID
+            targettable: Member
+            targetcolumns:
+            - MemberID
+            fkname: fk_Loan_Borrower_assoc
+          - sourcecolumns:
+            - LoanStatusID
+            targettable: LoanStatus
+            targetcolumns:
+            - ID
+            fkname: fk_Loan_LoanStatus
+        - tablename: Reservation
+          columns:
+          - columnname: ReservationID
+            type: INTEGER
+          - columnname: ReservationDate
+            type: DATE
+          - columnname: ExpirationDate
+            type: DATE
+          - columnname: NotificationDate
+            type: DATE
+            nullable: true
+          - columnname: ReservedBookID
+            type: INTEGER
+          - columnname: RequesterID
+            type: INTEGER
+          - columnname: ReservationStatusID
+            type: INTEGER
+          primary_key:
+          - ReservationID
+          foreign_keys:
+          - sourcecolumns:
+            - ReservedBookID
+            targettable: Book
+            targetcolumns:
+            - BookID
+            fkname: fk_Reservation_ReservedBook_assoc
+          - sourcecolumns:
+            - RequesterID
+            targettable: Member
+            targetcolumns:
+            - MemberID
+            fkname: fk_Reservation_Requester_assoc
+          - sourcecolumns:
+            - ReservationStatusID
+            targettable: ReservationStatus
+            targetcolumns:
+            - ID
+            fkname: fk_Reservation_ReservationStatus
+        - tablename: Fine
+          columns:
+          - columnname: FineID
+            type: INTEGER
+          - columnname: Amount
+            type: DECIMAL
+          - columnname: AssessmentDate
+            type: DATE
+          - columnname: PaymentDate
+            type: DATE
+            nullable: true
+          - columnname: Reason
+            type: TEXT
+          - columnname: OverdueLoanID
+            type: INTEGER
+          - columnname: FinedMemberID
+            type: INTEGER
+          - columnname: FineStatusID
+            type: INTEGER
+          primary_key:
+          - FineID
+          foreign_keys:
+          - sourcecolumns:
+            - OverdueLoanID
+            targettable: Loan
+            targetcolumns:
+            - LoanID
+            fkname: fk_Fine_OverdueLoan_assoc
+          - sourcecolumns:
+            - FinedMemberID
+            targettable: Member
+            targetcolumns:
+            - MemberID
+            fkname: fk_Fine_FinedMember_assoc
+          - sourcecolumns:
+            - FineStatusID
+            targettable: FineStatus
+            targetcolumns:
+            - ID
+            fkname: fk_Fine_FineStatus
+        - tablename: BookAuthorship
+          columns:
+          - columnname: AuthoredBookID
+            type: INTEGER
+          - columnname: BookAuthorID
+            type: INTEGER
+          - columnname: AuthorOrder
+            type: INTEGER
+          - columnname: AuthorRoleID
+            type: INTEGER
+          primary_key:
+          - AuthoredBookID
+          - BookAuthorID
+          foreign_keys:
+          - sourcecolumns:
+            - AuthoredBookID
+            targettable: Book
+            targetcolumns:
+            - BookID
+            fkname: fk_BookAuthorship_AuthoredBook
+          - sourcecolumns:
+            - BookAuthorID
+            targettable: Author
+            targetcolumns:
+            - AuthorID
+            fkname: fk_BookAuthorship_BookAuthor
+          - sourcecolumns:
+            - AuthorRoleID
+            targettable: AuthorRole
+            targetcolumns:
+            - ID
+            fkname: fk_BookAuthorship_AuthorRole
+        - tablename: BookSubject
+          columns:
+          - columnname: ClassifiedBookID
+            type: INTEGER
+          - columnname: ClassificationID
+            type: INTEGER
+          - columnname: IsPrimary
+            type: INTEGER
+          primary_key:
+          - ClassifiedBookID
+          - ClassificationID
+          foreign_keys:
+          - sourcecolumns:
+            - ClassifiedBookID
+            targettable: Book
+            targetcolumns:
+            - BookID
+            fkname: fk_BookSubject_ClassifiedBook
+          - sourcecolumns:
+            - ClassificationID
+            targettable: Subject
+            targetcolumns:
+            - SubjectID
+            fkname: fk_BookSubject_Classification
+        datalists:
+        - tablename: LoanStatus
+          values:
+          - Active
+          - Returned
+          - Overdue
+          - Lost
+          - Renewed
+        - tablename: CopyCondition
+          values:
+          - New
+          - Good
+          - Fair
+          - Poor
+          - Damaged
+          - Withdrawn
+        - tablename: ReservationStatus
+          values:
+          - Pending
+          - ReadyForPickup
+          - Fulfilled
+          - Cancelled
+          - Expired
+        - tablename: MemberStatus
+          values:
+          - Active
+          - Suspended
+          - Expired
+          - Blocked
+        - tablename: FineStatus
+          values:
+          - Outstanding
+          - Paid
+          - Waived
+          - InCollection
+        - tablename: AuthorRole
+          values:
+          - PrimaryAuthor
+          - CoAuthor
+          - Editor
+          - Translator
+          - Illustrator
+        - tablename: MediaFormat
+          values:
+          - Hardcover
+          - Paperback
+          - EBook
+          - Audiobook
+          - DVD
+          - CDROM
+        """
+    )
+
+    er_schema = ERAstFactory.create_schema(parse_yaml(er_yaml, schema))
+    expected_rel_schema = RelAstFactory.create_schema(parse_yaml(rel_yaml, rel_schema))
+
+    assert translate_er_ast_to_rel_ast(er_schema) == expected_rel_schema

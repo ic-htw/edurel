@@ -119,7 +119,7 @@ def _sql_datalist_insert_statements(datalist: DataList) -> list[str]:
     for index, value in enumerate(datalist.values, start=1):
         statements.append(
             f"INSERT INTO {datalist.tablename} (ID, Description, IsValid, SortOrder) "
-            f"VALUES ({index}, {_sql_string_literal(value)}, TRUE, {index});"
+            f"VALUES ({index}, {_sql_string_literal(value)}, 1, {index});"
         )
     return statements
 
