@@ -22,7 +22,7 @@ from edurel.syntax.rel_yaml_schema import schema as rel_schema
 from edurel.translation.er_trans import (
     ERSchemaTranslationBuilder,
     ERSchemaTranslationVisitor,
-    MermaidClassDiagramTranslationBuilder,
+    MermaidTranslationBuilder,
     RelAstTranslationBuilder,
     YamlTranslationBuilder,
     translate_er_ast_to_rel_ast,
@@ -445,8 +445,6 @@ def test_mermaid_class_diagram_translation_builder_serializes_ast_from_yaml() ->
           associations:
           - targetentity: Person
             cardinality: ONE
-          - targetentity: Rolle
-            cardinality: ONE
           attributes:
           - attributename: DatumBeginn
             type: DATE
@@ -579,7 +577,7 @@ def test_mermaid_class_diagram_translation_builder_serializes_ast_from_yaml() ->
     er_schema = ERAstFactory.create_schema(parse_yaml(yaml_text, schema))
     validate_ast(er_schema)
 
-    builder = MermaidClassDiagramTranslationBuilder(direction="LR")
+    builder = MermaidTranslationBuilder(direction="LR")
     visitor = ERSchemaTranslationVisitor(builder)
 
     visitor.visit(er_schema)
@@ -725,7 +723,7 @@ def test_mermaid_relationships_render_as_direct_associations() -> None:
         ],
     )
 
-    builder = MermaidClassDiagramTranslationBuilder(direction="LR")
+    builder = MermaidTranslationBuilder(direction="LR")
     visitor = ERSchemaTranslationVisitor(builder)
 
     visitor.visit(er_schema)
@@ -765,7 +763,7 @@ def test_mermaid_global_key_uses_role_when_present() -> None:
         ],
     )
 
-    builder = MermaidClassDiagramTranslationBuilder(direction="LR")
+    builder = MermaidTranslationBuilder(direction="LR")
     visitor = ERSchemaTranslationVisitor(builder)
 
     visitor.visit(er_schema)

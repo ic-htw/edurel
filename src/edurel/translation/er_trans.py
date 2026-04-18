@@ -519,7 +519,7 @@ class YamlTranslationBuilder(ERSchemaTranslationBuilder):
                     lines.append(f"      role: {_yaml_scalar(global_key['role'])}")
 
 
-class MermaidClassDiagramTranslationBuilder(ERSchemaTranslationBuilder):
+class MermaidTranslationBuilder(ERSchemaTranslationBuilder):
     def __init__(self, direction: str = "LR") -> None:
         self.direction = direction
         self.class_order: list[str] = []

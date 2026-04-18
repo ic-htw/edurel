@@ -400,7 +400,6 @@ def validate_ast(er_schema: ERSchema) -> None:
     association_names_set = set(association_names)
     valuelist_names_set = set(valuelist_names)
     known_structure_targets = entity_names_set | association_names_set
-    known_targetentities = known_structure_targets | valuelist_names_set
 
     for shared_name in sorted(entity_names_set & association_names_set):
         errors.append(
@@ -480,22 +479,22 @@ def validate_ast(er_schema: ERSchema) -> None:
                 for global_key in associative_entity.identification.global_keys
             ]
             for targetentity in identification_targets:
-                if targetentity not in known_targetentities:
+                if targetentity not in known_structure_targets:
                     errors.append(
                         f"Associative entity '{associative_entity.associationname}' "
                         f"identification targetentity '{targetentity}' does not exist "
-                        f"as entityname, associationname, or valuelistname."
+                        f"as entityname or associationname."
                     )
 
         association_targets = [
             association.targetentity for association in associative_entity.associations
         ]
         for targetentity in association_targets:
-            if targetentity not in known_targetentities:
+            if targetentity not in known_structure_targets:
                 errors.append(
                     f"Associative entity '{associative_entity.associationname}' "
                     f"association targetentity '{targetentity}' does not exist as "
-                    f"entityname, associationname, or valuelistname."
+                    f"entityname or associationname."
                 )
 
         for targetentity in sorted(set(identification_targets) & set(association_targets)):
@@ -522,11 +521,11 @@ def validate_ast(er_schema: ERSchema) -> None:
             )
 
         for participant in relationship.entities:
-            if participant.entityname not in known_targetentities:
+            if participant.entityname not in known_structure_targets:
                 errors.append(
                     f"Relationship '{relationship.relationshipname}' targetentity "
                     f"'{participant.entityname}' does not exist as entityname or "
-                    f"associationname or valuelistname."
+                    f"associationname."
                 )
 
     for inheritance in er_schema.inheritances:

@@ -270,43 +270,6 @@ def test_validate_ast_accepts_valid_er_schema() -> None:
 
     assert validate_ast(er_schema) is None
 
-
-def test_validate_ast_allows_targetentity_to_reference_valuelistname() -> None:
-    er_schema = ERSchema(
-        entities=[
-            Entity(entityname="Person", key="PersonID"),
-            Entity(entityname="Student"),
-        ],
-        associative_entities=[
-            AssociativeEntity(
-                associationname="Enrollment",
-                identification=Identification(
-                    global_keys=[GlobalKey(targetentity="GradeScale")]
-                ),
-                associations=[Association(targetentity="Grade")],
-            )
-        ],
-        relationships=[
-            Relationship(
-                relationshipname="AssignedGrade",
-                entities=[
-                    RelationshipEntity(entityname="Student"),
-                    RelationshipEntity(entityname="Grade"),
-                ],
-            )
-        ],
-        inheritances=[
-            Inheritance(superentity="Person", subentities=["Student"]),
-        ],
-        valuelists=[
-            ValueList(valuelistname="GradeScale", values=["letter"]),
-            ValueList(valuelistname="Grade", values=["A", "B", "C"]),
-        ],
-    )
-
-    assert validate_ast(er_schema) is None
-
-
 def test_validate_ast_reports_requested_semantic_errors() -> None:
     er_schema = ERSchema(
         entities=[
