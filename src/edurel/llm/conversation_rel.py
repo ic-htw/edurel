@@ -1,6 +1,5 @@
 from textwrap import dedent
 
-from langchain_core.language_models import BaseChatModel
 from edurel.utils.md import md_sql, md_yaml
 from typing import List
 from edurel.llm.conversation_base import Conversation
