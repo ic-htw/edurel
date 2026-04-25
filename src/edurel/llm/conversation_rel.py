@@ -14,9 +14,8 @@ class DataGenConversation(Conversation):
 
         system_prompt = dedent("""
         You are a helpful assistant for generating synthetic data for SQL tables.
-        You will be given a YAML description of the tables and their relationships, 
-        as well as some existing data in SQL insert statement format.
-        Your task is to generate additional SQL insert statements to create more synthetic data 
+        You will be given a YAML description of the tables and their relationships.
+        Your task is to generate SQL insert statements to create synthetic data 
         for the tables, while respecting the relationships and constraints described in the YAML.
         """)
 
@@ -31,12 +30,20 @@ class DataGenConversation(Conversation):
 
         self.is_schema_set = True
 
-    def set_already_existing_data(self, data_sql: str) -> None:
+    def set_already_existing_data(self, data: str, format: str = "sql") -> None:
+        # format can be "sql" or "csv"
         if not self.is_schema_set:
             raise Exception("Database schema not set. Please call set_database_schema().")
         prompt = []
-        prompt.append("The following data is already given:")
-        prompt.append(md_sql(data_sql))
+        prompt.append("The following data is already given")
+        if format == "sql":
+            prompt.append("as SQL insert statements:")
+            prompt.append(data)
+        elif format == "csv":
+            prompt.append("as CSV data:")
+            prompt.append(data)
+        else:            
+            raise ValueError("Unsupported format. Use 'sql' or 'csv'.")    
         prompt.append("Don't repeat this data in future requests.")
         self.insert_message_at_end("\n".join(prompt))
     
@@ -47,7 +54,7 @@ class DataGenConversation(Conversation):
         prompt.append(
             dedent(f"""
             Create at least {no_of_records_per_table} insert statements for each table.
-            Don't repeat already created data.
+            Don't repeat already given data.
             """)
         )
         
@@ -81,7 +88,7 @@ class SQLGenConversation(Conversation):
 
         self.is_schema_set = True
 
-    def insert_question_message(self, question: str, dbkind: str = "duckdb") -> None:
+    def insert_question_message(self, question: str, dbkind: str = "postgres") -> None:
         if not self.is_schema_set:
             raise Exception("Database schema not set. Please call set_database_schema().")
         

@@ -25,9 +25,15 @@ from edurel.translation.er_trans import (
     MermaidTranslationBuilder,
     RelAstTranslationBuilder,
     YamlTranslationBuilder,
-    translate_er_ast_to_rel_ast,
 )
 from edurel.utils.yaml import parse_yaml
+
+
+def translate_er_ast_to_rel_ast(er_schema: ERSchema):
+    builder = RelAstTranslationBuilder()
+    visitor = ERSchemaTranslationVisitor(builder)
+    visitor.visit(er_schema)
+    return builder.build()
 
 
 class RecordingBuilder(ERSchemaTranslationBuilder):

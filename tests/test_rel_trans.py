@@ -3,8 +3,8 @@ from edurel.translation.rel_trans import (
     RelSchemaLevelTranslationVisitor,
     RelSchemaTranslationBuilder,
     RelSchemaTranslationVisitor,
-    SqlInlineTranslationBuilder,
-    SqlTranslationBuilder,
+    SqlTranslationBuilderFkExternal,
+    SqlTranslationBuilderFkInternal,
 )
 
 
@@ -133,7 +133,7 @@ def test_level_translation_visitor_does_nothing_when_all_table_levels_are_zero()
     assert builder.events == []
 
 
-def test_sql_inline_translation_builder_inlines_foreign_keys_in_create_table() -> None:
+def test_sql_translation_builder_fk_internal_inlines_foreign_keys_in_create_table() -> None:
     rel_schema = RelSchema(
         tables=[
             Table(
@@ -160,7 +160,7 @@ def test_sql_inline_translation_builder_inlines_foreign_keys_in_create_table() -
         ]
     )
 
-    builder = SqlInlineTranslationBuilder()
+    builder = SqlTranslationBuilderFkInternal()
     visitor = RelSchemaTranslationVisitor(builder)
 
     visitor.visit(rel_schema)
@@ -179,7 +179,7 @@ def test_sql_inline_translation_builder_inlines_foreign_keys_in_create_table() -
     )
 
 
-def test_sql_inline_translation_builder_comments_out_cycle_foreign_keys() -> None:
+def test_sql_translation_builder_fk_internal_comments_out_cycle_foreign_keys() -> None:
     rel_schema = RelSchema(
         tables=[
             Table(
@@ -202,7 +202,7 @@ def test_sql_inline_translation_builder_comments_out_cycle_foreign_keys() -> Non
         ]
     )
 
-    builder = SqlInlineTranslationBuilder()
+    builder = SqlTranslationBuilderFkInternal()
     visitor = RelSchemaTranslationVisitor(builder)
 
     visitor.visit(rel_schema)
@@ -217,7 +217,7 @@ def test_sql_inline_translation_builder_comments_out_cycle_foreign_keys() -> Non
     )
 
 
-def test_sql_translation_builder_generates_datalist_insert_statements() -> None:
+def test_sql_translation_builder_fk_external_generates_datalist_insert_statements() -> None:
     rel_schema = RelSchema(
         tables=[
             Table(
@@ -234,7 +234,7 @@ def test_sql_translation_builder_generates_datalist_insert_statements() -> None:
         datalists=[DataList(tablename="status_codes", values=["Open", "Closed", "Owner's Review"])],
     )
 
-    builder = SqlTranslationBuilder()
+    builder = SqlTranslationBuilderFkExternal()
     visitor = RelSchemaTranslationVisitor(builder)
 
     visitor.visit(rel_schema)
@@ -253,7 +253,7 @@ def test_sql_translation_builder_generates_datalist_insert_statements() -> None:
     )
 
 
-def test_sql_inline_translation_builder_generates_datalist_insert_statements() -> None:
+def test_sql_translation_builder_fk_internal_generates_datalist_insert_statements() -> None:
     rel_schema = RelSchema(
         tables=[
             Table(
@@ -270,7 +270,7 @@ def test_sql_inline_translation_builder_generates_datalist_insert_statements() -
         datalists=[DataList(tablename="status_codes", values=["Open", "Closed"])],
     )
 
-    builder = SqlInlineTranslationBuilder()
+    builder = SqlTranslationBuilderFkInternal()
     visitor = RelSchemaTranslationVisitor(builder)
 
     visitor.visit(rel_schema)

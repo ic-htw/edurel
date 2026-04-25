@@ -10,8 +10,8 @@ from edurel.translation.rel_trans import (
     RelSchemaTranslationBuilder,
     RelSchemaTranslationVisitor,
     RelSchemaLevelTranslationVisitor,
-    SqlInlineTranslationBuilder,
-    SqlTranslationBuilder,
+    SqlTranslationBuilderFkExternal,
+    SqlTranslationBuilderFkInternal,
     StructureTranslationBuilder,
     YamlTranslationBuilder,
 )
@@ -79,19 +79,16 @@ class RelSchemaMan:
         save_text_to_file(self.get_yaml(), output_path, overwrite=overwrite)
 
     # SQL
-    def get_sql(self) -> str:
-        return self._translate(SqlTranslationBuilder(), RelSchemaTranslationVisitor)
-    def display_sql(self) -> None:
-        display_md(md_sql(self.get_sql()))
-    def get_sql_inline(self) -> str:
-        enrich_ast(self.ast)
-        return self._translate(SqlInlineTranslationBuilder(), RelSchemaLevelTranslationVisitor)
-    def display_sql_inline(self) -> None:
-        display_md(md_sql(self.get_sql_inline()))
-    def save_sql(self, output_path: str, overwrite: bool = False) -> None:
-        save_text_to_file(self.get_sql(), output_path, overwrite=overwrite)
-    def save_sql_inline(self, output_path: str, overwrite: bool = False) -> None:
-        save_text_to_file(self.get_sql_inline(), output_path, overwrite=overwrite)
+    def get_sql(self, fk_external: bool = True) -> str:
+        if fk_external:
+            return self._translate(SqlTranslationBuilderFkExternal(), RelSchemaTranslationVisitor)
+        else:
+            enrich_ast(self.ast)
+            return self._translate(SqlTranslationBuilderFkInternal(), RelSchemaLevelTranslationVisitor)
+    def display_sql(self, fk_external: bool = True) -> None:
+        display_md(md_sql(self.get_sql(fk_external)))
+    def save_sql(self, output_path: str, fk_external: bool = True, overwrite: bool = False) -> None:
+        save_text_to_file(self.get_sql(fk_external=fk_external), output_path, overwrite=overwrite)
 
     # MERMAID
     def get_mermaid_code(self, direction: str = "TB") -> str:

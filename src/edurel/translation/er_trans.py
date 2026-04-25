@@ -193,41 +193,6 @@ class ERSchemaTranslationVisitor:
         self.builder.end_valuelist(valuelist)
 
 
-def _yaml_scalar(value: str | bool) -> str:
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if value == "" or value.lower() in {"true", "false", "null", "~"}:
-        return "'" + value.replace("'", "''") + "'"
-    if re.fullmatch(r"[A-Za-z0-9_(), .-]+", value):
-        return value
-    return "'" + value.replace("'", "''") + "'"
-
-
-def _strip_attribute_type_size(attribute_type: str) -> str:
-    return re.sub(r"\s*\(.*\)$", "", attribute_type).strip()
-
-
-def _member_type(attribute_type: str | None, default: str = "INTEGER") -> str:
-    if attribute_type is None:
-        return default
-    stripped_type = _strip_attribute_type_size(attribute_type)
-    return stripped_type or default
-
-
-def _mermaid_cardinality(cardinality: str | None) -> str:
-    if cardinality == "ONE":
-        return "1"
-    if cardinality == "OPTIONAL_ONE":
-        return "0..1"
-    if cardinality in {"MANY", "OPTIONAL_MANY"}:
-        return "0..*"
-    return "1"
-
-
-def _mermaid_text(value: str) -> str:
-    return value.replace('"', '\\"')
-
-
 class YamlTranslationBuilder(ERSchemaTranslationBuilder):
     def __init__(self) -> None:
         self.entities: list[dict] = []
@@ -381,17 +346,27 @@ class YamlTranslationBuilder(ERSchemaTranslationBuilder):
         self.valuelists.append(self.current_valuelist)
         self.current_valuelist = None
 
+    @staticmethod
+    def _yaml_scalar(value: str | bool) -> str:
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        if value == "" or value.lower() in {"true", "false", "null", "~"}:
+            return "'" + value.replace("'", "''") + "'"
+        if re.fullmatch(r"[A-Za-z0-9_(), .-]+", value):
+            return value
+        return "'" + value.replace("'", "''") + "'"
+
     def build(self) -> str:
         lines: list[str] = []
 
         if self.entities:
             lines.append("entities:")
             for entity in self.entities:
-                lines.append(f"- entityname: {_yaml_scalar(entity['entityname'])}")
+                lines.append(f"- entityname: {self._yaml_scalar(entity['entityname'])}")
                 if "key" in entity:
-                    lines.append(f"  key: {_yaml_scalar(entity['key'])}")
+                    lines.append(f"  key: {self._yaml_scalar(entity['key'])}")
                 if "keytype" in entity:
-                    lines.append(f"  keytype: {_yaml_scalar(entity['keytype'])}")
+                    lines.append(f"  keytype: {self._yaml_scalar(entity['keytype'])}")
                 self._append_attributes(lines, entity.get("attributes", []))
 
         if self.associative_entities:
@@ -399,7 +374,7 @@ class YamlTranslationBuilder(ERSchemaTranslationBuilder):
             for associative_entity in self.associative_entities:
                 lines.append(
                     f"- associationname: "
-                    f"{_yaml_scalar(associative_entity['associationname'])}"
+                    f"{self._yaml_scalar(associative_entity['associationname'])}"
                 )
                 identification = associative_entity.get("identification")
                 if identification is not None:
@@ -410,14 +385,16 @@ class YamlTranslationBuilder(ERSchemaTranslationBuilder):
                     for association in associations:
                         lines.append(
                             f"  - targetentity: "
-                            f"{_yaml_scalar(association['targetentity'])}"
+                            f"{self._yaml_scalar(association['targetentity'])}"
                         )
                         if "role" in association:
-                            lines.append(f"    role: {_yaml_scalar(association['role'])}")
+                            lines.append(
+                                f"    role: {self._yaml_scalar(association['role'])}"
+                            )
                         if "cardinality" in association:
                             lines.append(
                                 "    cardinality: "
-                                f"{_yaml_scalar(association['cardinality'])}"
+                                f"{self._yaml_scalar(association['cardinality'])}"
                             )
                 self._append_attributes(
                     lines, associative_entity.get("attributes", [])
@@ -428,18 +405,18 @@ class YamlTranslationBuilder(ERSchemaTranslationBuilder):
             for relationship in self.relationships:
                 lines.append(
                     f"- relationshipname: "
-                    f"{_yaml_scalar(relationship['relationshipname'])}"
+                    f"{self._yaml_scalar(relationship['relationshipname'])}"
                 )
                 lines.append("  entities:")
                 for entity in relationship["entities"]:
                     lines.append(
-                        f"  - targetentity: {_yaml_scalar(entity['targetentity'])}"
+                        f"  - targetentity: {self._yaml_scalar(entity['targetentity'])}"
                     )
                     if "role" in entity:
-                        lines.append(f"    role: {_yaml_scalar(entity['role'])}")
+                        lines.append(f"    role: {self._yaml_scalar(entity['role'])}")
                     if "cardinality" in entity:
                         lines.append(
-                            f"    cardinality: {_yaml_scalar(entity['cardinality'])}"
+                            f"    cardinality: {self._yaml_scalar(entity['cardinality'])}"
                         )
                 self._append_attributes(lines, relationship.get("attributes", []))
 
@@ -447,32 +424,32 @@ class YamlTranslationBuilder(ERSchemaTranslationBuilder):
             lines.append("inheritances:")
             for inheritance in self.inheritances:
                 lines.append(
-                    f"- superentity: {_yaml_scalar(inheritance['superentity'])}"
+                    f"- superentity: {self._yaml_scalar(inheritance['superentity'])}"
                 )
                 lines.append("  subentities:")
                 for subentity in inheritance["subentities"]:
-                    lines.append(f"  - {_yaml_scalar(subentity)}")
+                    lines.append(f"  - {self._yaml_scalar(subentity)}")
                 if "implementation" in inheritance:
                     lines.append(
                         "  implementation: "
-                        f"{_yaml_scalar(inheritance['implementation'])}"
+                        f"{self._yaml_scalar(inheritance['implementation'])}"
                     )
 
         if self.valuelists:
             lines.append("valuelists:")
             for valuelist in self.valuelists:
                 lines.append(
-                    f"- valuelistname: {_yaml_scalar(valuelist['valuelistname'])}"
+                    f"- valuelistname: {self._yaml_scalar(valuelist['valuelistname'])}"
                 )
                 lines.append("  values:")
                 for value in valuelist["values"]:
-                    lines.append(f"  - {_yaml_scalar(value)}")
+                    lines.append(f"  - {self._yaml_scalar(value)}")
                 many_to_one_entities = valuelist.get("many_to_one_from_entities", [])
                 if many_to_one_entities:
                     lines.append("  many_to_one_from_entities:")
                     for entity in many_to_one_entities:
                         lines.append(
-                            f"  - sourceentity: {_yaml_scalar(entity['sourceentity'])}"
+                            f"  - sourceentity: {self._yaml_scalar(entity['sourceentity'])}"
                         )
 
         return "\n".join(lines)
@@ -493,8 +470,12 @@ class YamlTranslationBuilder(ERSchemaTranslationBuilder):
             return
         lines.append("  attributes:")
         for attribute in attributes:
-            lines.append(f"  - attributename: {_yaml_scalar(attribute['attributename'])}")
-            lines.append(f"    type: {_yaml_scalar(attribute['type'])}")
+            lines.append(
+                f"  - attributename: {YamlTranslationBuilder._yaml_scalar(attribute['attributename'])}"
+            )
+            lines.append(
+                f"    type: {YamlTranslationBuilder._yaml_scalar(attribute['type'])}"
+            )
             if attribute.get("nullable"):
                 lines.append("    nullable: true")
 
@@ -505,18 +486,24 @@ class YamlTranslationBuilder(ERSchemaTranslationBuilder):
             return
         lines.append("  identification:")
         if "localkey" in identification:
-            lines.append(f"    localkey: {_yaml_scalar(identification['localkey'])}")
+            lines.append(
+                f"    localkey: {YamlTranslationBuilder._yaml_scalar(identification['localkey'])}"
+            )
         if "keytype" in identification:
-            lines.append(f"    keytype: {_yaml_scalar(identification['keytype'])}")
+            lines.append(
+                f"    keytype: {YamlTranslationBuilder._yaml_scalar(identification['keytype'])}"
+            )
         global_keys = identification.get("global", [])
         if global_keys:
             lines.append("    global:")
             for global_key in global_keys:
                 lines.append(
-                    f"    - targetentity: {_yaml_scalar(global_key['targetentity'])}"
+                    f"    - targetentity: {YamlTranslationBuilder._yaml_scalar(global_key['targetentity'])}"
                 )
                 if "role" in global_key:
-                    lines.append(f"      role: {_yaml_scalar(global_key['role'])}")
+                    lines.append(
+                        f"      role: {YamlTranslationBuilder._yaml_scalar(global_key['role'])}"
+                    )
 
 
 class MermaidTranslationBuilder(ERSchemaTranslationBuilder):
@@ -573,14 +560,14 @@ class MermaidTranslationBuilder(ERSchemaTranslationBuilder):
 
     def add_entity_key(self, entity: Entity) -> None:
         self._add_key_member(
-            f"**key**({entity.key} {_member_type(entity.keytype)})"
+            f"**key**({entity.key} {self._member_type(entity.keytype)})"
         )
         self.current_class_has_key = True
 
     def add_entity_attribute(self, entity: Entity, attribute: Attribute) -> None:
         visibility = "-" if attribute.nullable else "+"
         self._add_attribute_member(
-            f"{visibility}{attribute.attributename} {_member_type(attribute.type)}"
+            f"{visibility}{attribute.attributename} {self._member_type(attribute.type)}"
         )
 
     def end_entity(self, entity: Entity) -> None:
@@ -593,7 +580,7 @@ class MermaidTranslationBuilder(ERSchemaTranslationBuilder):
         if identification.localkey is not None:
             self._add_key_member(
                 f"**local_key**({identification.localkey} "
-                f"{_member_type(identification.keytype)})"
+                f"{self._member_type(identification.keytype)})"
             )
             self.current_class_has_key = True
 
@@ -633,7 +620,7 @@ class MermaidTranslationBuilder(ERSchemaTranslationBuilder):
     ) -> None:
         visibility = "-" if attribute.nullable else "+"
         self._add_attribute_member(
-            f"{visibility}{attribute.attributename} {_member_type(attribute.type)}"
+            f"{visibility}{attribute.attributename} {self._member_type(attribute.type)}"
         )
 
     def end_associative_entity(self, associative_entity: AssociativeEntity) -> None:
@@ -656,8 +643,8 @@ class MermaidTranslationBuilder(ERSchemaTranslationBuilder):
         if len(self.current_relationship_entities) == 2:
             left_entity, right_entity = self.current_relationship_entities
             self.relationship_edges.append(
-                f'    {left_entity.entityname} "{_mermaid_cardinality(left_entity.cardinality)}" '
-                f'-- "{_mermaid_cardinality(right_entity.cardinality)}" '
+                f'    {left_entity.entityname} "{self._mermaid_cardinality(left_entity.cardinality)}" '
+                f'-- "{self._mermaid_cardinality(right_entity.cardinality)}" '
                 f"{right_entity.entityname} : {relationship.relationshipname}"
             )
         self.current_relationship_entities = []
@@ -679,6 +666,27 @@ class MermaidTranslationBuilder(ERSchemaTranslationBuilder):
     def end_valuelist(self, valuelist: ValueList) -> None:
         return None
 
+    @staticmethod
+    def _mermaid_cardinality(cardinality: str | None) -> str:
+        if cardinality == "ONE":
+            return "1"
+        if cardinality == "OPTIONAL_ONE":
+            return "0..1"
+        if cardinality in {"MANY", "OPTIONAL_MANY"}:
+            return "0..*"
+        return "1"
+
+    @staticmethod
+    def _member_type(attribute_type: str | None, default: str = "INTEGER") -> str:
+        if attribute_type is None:
+            return default
+        stripped_type = re.sub(r"\s*\(.*\)$", "", attribute_type).strip()
+        return stripped_type or default
+
+    @staticmethod
+    def _mermaid_text(value: str) -> str:
+        return value.replace('"', '\\"')
+
     def build(self) -> str:
         lines = [
             "---",
@@ -693,7 +701,7 @@ class MermaidTranslationBuilder(ERSchemaTranslationBuilder):
         if self.valuelist_values:
             lines.append('    note "Entries in Valuelists:')
             for valuelistname, values in self.valuelist_values:
-                values_str = ", ".join(_mermaid_text(value) for value in values)
+                values_str = ", ".join(self._mermaid_text(value) for value in values)
                 lines.append(f"    {valuelistname}: {values_str}")
             lines.append('    "')
 
@@ -764,7 +772,7 @@ class MermaidTranslationBuilder(ERSchemaTranslationBuilder):
             self._add_valuelist_usage(source, target)
             return
         self.association_edges.append(
-            f'    {source} "0..*" -- "{_mermaid_cardinality(target_cardinality)}" '
+            f'    {source} "0..*" -- "{self._mermaid_cardinality(target_cardinality)}" '
             f"{target} : {label}"
         )
 
@@ -871,7 +879,7 @@ class RelAstTranslationBuilder(ERSchemaTranslationBuilder):
                 [
                     Column(
                         columnname=identification.localkey,
-                        type=_member_type(identification.keytype),
+                        type=self._rel_member_type(identification.keytype),
                     )
                 ],
             )
@@ -1056,6 +1064,14 @@ class RelAstTranslationBuilder(ERSchemaTranslationBuilder):
             datalists=self.datalists,
         )
 
+    @staticmethod
+    def _rel_member_type(attribute_type: str | None, default: str = "INTEGER") -> str:
+        if attribute_type is None:
+            return default
+        # stripped_type = re.sub(r"\s*\(.*\)$", "", attribute_type).strip()
+        stripped_type = attribute_type.strip()
+        return stripped_type or default
+
     def _resolve_primary_key_columns(self, structure_name: str) -> list[Column]:
         existing = self.structure_primary_keys.get(structure_name)
         if existing is not None:
@@ -1076,7 +1092,7 @@ class RelAstTranslationBuilder(ERSchemaTranslationBuilder):
                 [
                     Column(
                         columnname=entity.key,
-                        type=_member_type(entity.keytype),
+                        type=self._rel_member_type(entity.keytype),
                     )
                 ]
                 if entity.key is not None
@@ -1096,7 +1112,7 @@ class RelAstTranslationBuilder(ERSchemaTranslationBuilder):
                     resolved.append(
                         Column(
                             columnname=identification.localkey,
-                            type=_member_type(identification.keytype),
+                            type=self._rel_member_type(identification.keytype),
                         )
                     )
                 for global_key in identification.global_keys:
@@ -1227,10 +1243,3 @@ class RelAstTranslationBuilder(ERSchemaTranslationBuilder):
     @staticmethod
     def _is_many_cardinality(cardinality: str | None) -> bool:
         return cardinality in {"MANY", "OPTIONAL_MANY"}
-
-
-def translate_er_ast_to_rel_ast(er_schema: ERSchema) -> RelSchema:
-    builder = RelAstTranslationBuilder()
-    visitor = ERSchemaTranslationVisitor(builder)
-    visitor.visit(er_schema)
-    return builder.build()
