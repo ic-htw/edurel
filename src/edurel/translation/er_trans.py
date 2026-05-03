@@ -672,7 +672,9 @@ class MermaidTranslationBuilder(ERSchemaTranslationBuilder):
             return "1"
         if cardinality == "OPTIONAL_ONE":
             return "0..1"
-        if cardinality in {"MANY", "OPTIONAL_MANY"}:
+        if cardinality == "MANY":
+            return "1..*"
+        if cardinality == "OPTIONAL_MANY":
             return "0..*"
         return "1"
 
@@ -693,6 +695,12 @@ class MermaidTranslationBuilder(ERSchemaTranslationBuilder):
             "config:",
             "  class:",
             "    hideEmptyMembersBox: true",
+            "  themeCSS: |",
+            "    .classLabel .box {",
+            "      fill: transparent !important;",
+            "      stroke: none !important;",
+            "      opacity: 0 !important;",
+            "    }",
             "---",
             "classDiagram",
             f"    direction {self.direction}",
@@ -1179,6 +1187,9 @@ class RelAstTranslationBuilder(ERSchemaTranslationBuilder):
             target.entityname,
             target.role,
         )
+        if source.cardinality == "OPTIONAL_MANY":
+            for column in source_columns:
+                column.nullable = True
         self._add_columns(source_table, source_columns)
         self._add_foreign_key(
             source_table,

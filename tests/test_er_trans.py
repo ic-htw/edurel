@@ -594,6 +594,12 @@ def test_mermaid_class_diagram_translation_builder_serializes_ast_from_yaml() ->
         config:
           class:
             hideEmptyMembersBox: true
+          themeCSS: |
+            .classLabel .box {
+              fill: transparent !important;
+              stroke: none !important;
+              opacity: 0 !important;
+            }
         ---
         classDiagram
             direction LR
@@ -740,6 +746,12 @@ def test_mermaid_relationships_render_as_direct_associations() -> None:
         config:
           class:
             hideEmptyMembersBox: true
+          themeCSS: |
+            .classLabel .box {
+              fill: transparent !important;
+              stroke: none !important;
+              opacity: 0 !important;
+            }
         ---
         classDiagram
             direction LR
@@ -749,7 +761,7 @@ def test_mermaid_relationships_render_as_direct_associations() -> None:
             class Course:::entityStyle {
                 **key**(course_id INTEGER)
             }
-            Teacher "1" -- "0..*" Course : Teaches
+            Teacher "1" -- "1..*" Course : Teaches
 
             classDef entityStyle fill:#d0d0d0,stroke:#333,stroke-width:2px
         """
@@ -780,6 +792,12 @@ def test_mermaid_global_key_uses_role_when_present() -> None:
         config:
           class:
             hideEmptyMembersBox: true
+          themeCSS: |
+            .classLabel .box {
+              fill: transparent !important;
+              stroke: none !important;
+              opacity: 0 !important;
+            }
         ---
         classDiagram
             direction LR
@@ -912,6 +930,122 @@ def test_rel_ast_translation_builder_creates_bridge_table_for_many_to_many_relat
                             "fkname": "fk_Enrollment_Offering",
                         },
                     ],
+                },
+            ]
+        }
+    )
+
+
+def test_rel_ast_translation_builder_marks_direct_fk_nullable_for_optional_many_left_side() -> None:
+    er_schema = ERSchema(
+        entities=[
+            Entity(entityname="Book", key="BookID", keytype="INTEGER"),
+            Entity(entityname="Publisher", key="PublisherID", keytype="INTEGER"),
+        ],
+        relationships=[
+            Relationship(
+                relationshipname="BookPublisher",
+                entities=[
+                    RelationshipEntity(
+                        entityname="Book",
+                        role="PublishedBook",
+                        cardinality="OPTIONAL_MANY",
+                    ),
+                    RelationshipEntity(
+                        entityname="Publisher",
+                        role="BookPublisher",
+                        cardinality="ONE",
+                    ),
+                ],
+            )
+        ],
+    )
+
+    assert translate_er_ast_to_rel_ast(er_schema) == RelAstFactory.create_schema(
+        {
+            "tables": [
+                {
+                    "tablename": "Book",
+                    "columns": [
+                        {"columnname": "BookID", "type": "INTEGER"},
+                        {
+                            "columnname": "BookPublisherID",
+                            "type": "INTEGER",
+                            "nullable": True,
+                        },
+                    ],
+                    "primary_key": ["BookID"],
+                    "foreign_keys": [
+                        {
+                            "sourcecolumns": ["BookPublisherID"],
+                            "targettable": "Publisher",
+                            "targetcolumns": ["PublisherID"],
+                            "fkname": "fk_BookPublisher",
+                        }
+                    ],
+                },
+                {
+                    "tablename": "Publisher",
+                    "columns": [{"columnname": "PublisherID", "type": "INTEGER"}],
+                    "primary_key": ["PublisherID"],
+                },
+            ]
+        }
+    )
+
+
+def test_rel_ast_translation_builder_marks_direct_fk_nullable_for_optional_many_right_side() -> None:
+    er_schema = ERSchema(
+        entities=[
+            Entity(entityname="Book", key="BookID", keytype="INTEGER"),
+            Entity(entityname="Publisher", key="PublisherID", keytype="INTEGER"),
+        ],
+        relationships=[
+            Relationship(
+                relationshipname="BookPublisher",
+                entities=[
+                    RelationshipEntity(
+                        entityname="Publisher",
+                        role="BookPublisher",
+                        cardinality="ONE",
+                    ),
+                    RelationshipEntity(
+                        entityname="Book",
+                        role="PublishedBook",
+                        cardinality="OPTIONAL_MANY",
+                    ),
+                ],
+            )
+        ],
+    )
+
+    assert translate_er_ast_to_rel_ast(er_schema) == RelAstFactory.create_schema(
+        {
+            "tables": [
+                {
+                    "tablename": "Book",
+                    "columns": [
+                        {"columnname": "BookID", "type": "INTEGER"},
+                        {
+                            "columnname": "BookPublisherID",
+                            "type": "INTEGER",
+                            "nullable": True,
+                        },
+                    ],
+                    "primary_key": ["BookID"],
+                    "foreign_keys": [
+                        {
+                            "sourcecolumns": ["BookPublisherID"],
+                            "targettable": "Publisher",
+                            "targetcolumns": ["PublisherID"],
+                            "fkname": "fk_BookPublisher",
+                        }
+                    ],
+                },
+                {
+                    "tablename": "Publisher",
+                    "columns": [{"columnname": "PublisherID", "type": "INTEGER"}],
+                    "primary_key": ["PublisherID"],
                 },
             ]
         }
