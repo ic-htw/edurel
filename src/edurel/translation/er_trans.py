@@ -984,19 +984,29 @@ class RelAstTranslationBuilder(ERSchemaTranslationBuilder):
             self.current_relationship_attributes = []
             return
 
-        left_entity, right_entity = self.current_relationship_entities
-        if (
-            not self.current_relationship_attributes
-            and self._is_many_cardinality(left_entity.cardinality)
-            and not self._is_many_cardinality(right_entity.cardinality)
-        ):
-            self._add_relationship_foreign_key(source=left_entity, target=right_entity, relationshipname=relationship.relationshipname)
-        elif (
-            not self.current_relationship_attributes
-            and self._is_many_cardinality(right_entity.cardinality)
-            and not self._is_many_cardinality(left_entity.cardinality)
-        ):
-            self._add_relationship_foreign_key(source=right_entity, target=left_entity, relationshipname=relationship.relationshipname)
+        foreign_key_participants = self._direct_relationship_foreign_key_participants()
+        if foreign_key_participants is not None:
+            source_entity, target_entity = foreign_key_participants
+            if (
+                self._is_one_cardinality(source_entity.cardinality)
+                and self._is_one_cardinality(target_entity.cardinality)
+                and source_entity.cardinality == "ONE"
+                and self._can_use_primary_key_as_relationship_foreign_key(
+                    source=source_entity,
+                    target=target_entity,
+                )
+            ):
+                self._add_relationship_primary_key_foreign_key(
+                    source=source_entity,
+                    target=target_entity,
+                    relationshipname=relationship.relationshipname,
+                )
+            else:
+                self._add_relationship_foreign_key(
+                    source=source_entity,
+                    target=target_entity,
+                    relationshipname=relationship.relationshipname,
+                )
         else:
             bridge_table = Table(tablename=relationship.relationshipname)
             for entity in self.current_relationship_entities:
@@ -1187,10 +1197,32 @@ class RelAstTranslationBuilder(ERSchemaTranslationBuilder):
             target.entityname,
             target.role,
         )
-        if source.cardinality == "OPTIONAL_MANY":
+        if source.cardinality in {"OPTIONAL_ONE", "OPTIONAL_MANY"}:
             for column in source_columns:
                 column.nullable = True
         self._add_columns(source_table, source_columns)
+        self._add_foreign_key(
+            source_table,
+            ForeignKey(
+                fkname=f"fk_{relationshipname}",
+                sourcecolumns=[column.columnname for column in source_columns],
+                targettable=target.entityname,
+                targetcolumns=target_columns,
+            ),
+        )
+
+    def _add_relationship_primary_key_foreign_key(
+        self,
+        source: RelationshipEntity,
+        target: RelationshipEntity,
+        relationshipname: str,
+    ) -> None:
+        source_table = self.tables_by_name[source.entityname]
+        source_columns = self._resolve_primary_key_columns(source.entityname)
+        target_columns = [
+            column.columnname
+            for column in self._resolve_primary_key_columns(target.entityname)
+        ]
         self._add_foreign_key(
             source_table,
             ForeignKey(
@@ -1254,3 +1286,54 @@ class RelAstTranslationBuilder(ERSchemaTranslationBuilder):
     @staticmethod
     def _is_many_cardinality(cardinality: str | None) -> bool:
         return cardinality in {"MANY", "OPTIONAL_MANY"}
+
+    @staticmethod
+    def _is_one_cardinality(cardinality: str | None) -> bool:
+        return cardinality in {"ONE", "OPTIONAL_ONE"}
+
+    def _can_use_primary_key_as_relationship_foreign_key(
+        self,
+        source: RelationshipEntity,
+        target: RelationshipEntity,
+    ) -> bool:
+        source_primary_key = self._resolve_primary_key_columns(source.entityname)
+        target_primary_key = self._resolve_primary_key_columns(target.entityname)
+        if len(source_primary_key) != len(target_primary_key):
+            return False
+        return all(
+            source_column.type == target_column.type
+            for source_column, target_column in zip(
+                source_primary_key,
+                target_primary_key,
+                strict=True,
+            )
+        )
+
+    def _direct_relationship_foreign_key_participants(
+        self,
+    ) -> tuple[RelationshipEntity, RelationshipEntity] | None:
+        if self.current_relationship_attributes:
+            return None
+
+        left_entity, right_entity = self.current_relationship_entities
+        if (
+            self._is_many_cardinality(left_entity.cardinality)
+            and not self._is_many_cardinality(right_entity.cardinality)
+        ):
+            return left_entity, right_entity
+        if (
+            self._is_many_cardinality(right_entity.cardinality)
+            and not self._is_many_cardinality(left_entity.cardinality)
+        ):
+            return right_entity, left_entity
+        if not (
+            self._is_one_cardinality(left_entity.cardinality)
+            and self._is_one_cardinality(right_entity.cardinality)
+        ):
+            return None
+
+        if left_entity.cardinality == "ONE" and right_entity.cardinality == "OPTIONAL_ONE":
+            return left_entity, right_entity
+        if right_entity.cardinality == "ONE" and left_entity.cardinality == "OPTIONAL_ONE":
+            return right_entity, left_entity
+        return left_entity, right_entity

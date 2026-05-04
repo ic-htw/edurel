@@ -936,6 +936,166 @@ def test_rel_ast_translation_builder_creates_bridge_table_for_many_to_many_relat
     )
 
 
+def test_rel_ast_translation_builder_creates_direct_fk_for_one_to_one_relationship() -> None:
+    er_schema = ERSchema(
+        entities=[
+            Entity(entityname="User", key="UserID", keytype="INTEGER"),
+            Entity(entityname="Profile", key="ProfileID", keytype="INTEGER"),
+        ],
+        relationships=[
+            Relationship(
+                relationshipname="UserProfile",
+                entities=[
+                    RelationshipEntity(
+                        entityname="User",
+                        role="User",
+                        cardinality="ONE",
+                    ),
+                    RelationshipEntity(
+                        entityname="Profile",
+                        role="Profile",
+                        cardinality="ONE",
+                    ),
+                ],
+            )
+        ],
+    )
+
+    assert translate_er_ast_to_rel_ast(er_schema) == RelAstFactory.create_schema(
+        {
+            "tables": [
+                {
+                    "tablename": "User",
+                    "columns": [{"columnname": "UserID", "type": "INTEGER"}],
+                    "primary_key": ["UserID"],
+                    "foreign_keys": [
+                        {
+                            "sourcecolumns": ["UserID"],
+                            "targettable": "Profile",
+                            "targetcolumns": ["ProfileID"],
+                            "fkname": "fk_UserProfile",
+                        }
+                    ],
+                },
+                {
+                    "tablename": "Profile",
+                    "columns": [{"columnname": "ProfileID", "type": "INTEGER"}],
+                    "primary_key": ["ProfileID"],
+                },
+            ]
+        }
+    )
+
+
+def test_rel_ast_translation_builder_places_optional_one_fk_on_mandatory_side() -> None:
+    er_schema = ERSchema(
+        entities=[
+            Entity(entityname="User", key="UserID", keytype="INTEGER"),
+            Entity(entityname="Badge", key="BadgeID", keytype="INTEGER"),
+        ],
+        relationships=[
+            Relationship(
+                relationshipname="UserBadge",
+                entities=[
+                    RelationshipEntity(
+                        entityname="User",
+                        role="User",
+                        cardinality="OPTIONAL_ONE",
+                    ),
+                    RelationshipEntity(
+                        entityname="Badge",
+                        role="Badge",
+                        cardinality="ONE",
+                    ),
+                ],
+            )
+        ],
+    )
+
+    assert translate_er_ast_to_rel_ast(er_schema) == RelAstFactory.create_schema(
+        {
+            "tables": [
+                {
+                    "tablename": "User",
+                    "columns": [{"columnname": "UserID", "type": "INTEGER"}],
+                    "primary_key": ["UserID"],
+                },
+                {
+                    "tablename": "Badge",
+                    "columns": [{"columnname": "BadgeID", "type": "INTEGER"}],
+                    "primary_key": ["BadgeID"],
+                    "foreign_keys": [
+                        {
+                            "sourcecolumns": ["BadgeID"],
+                            "targettable": "User",
+                            "targetcolumns": ["UserID"],
+                            "fkname": "fk_UserBadge",
+                        }
+                    ],
+                },
+            ]
+        }
+    )
+
+
+def test_rel_ast_translation_builder_falls_back_to_nullable_direct_fk_for_optional_one_to_one_relationship() -> None:
+    er_schema = ERSchema(
+        entities=[
+            Entity(entityname="Person", key="PersonID", keytype="INTEGER"),
+            Entity(entityname="Locker", key="LockerID", keytype="INTEGER"),
+        ],
+        relationships=[
+            Relationship(
+                relationshipname="PersonLocker",
+                entities=[
+                    RelationshipEntity(
+                        entityname="Person",
+                        role="Person",
+                        cardinality="OPTIONAL_ONE",
+                    ),
+                    RelationshipEntity(
+                        entityname="Locker",
+                        role="Locker",
+                        cardinality="OPTIONAL_ONE",
+                    ),
+                ],
+            )
+        ],
+    )
+
+    assert translate_er_ast_to_rel_ast(er_schema) == RelAstFactory.create_schema(
+        {
+            "tables": [
+                {
+                    "tablename": "Person",
+                    "columns": [
+                        {"columnname": "PersonID", "type": "INTEGER"},
+                        {
+                            "columnname": "LockerID",
+                            "type": "INTEGER",
+                            "nullable": True,
+                        },
+                    ],
+                    "primary_key": ["PersonID"],
+                    "foreign_keys": [
+                        {
+                            "sourcecolumns": ["LockerID"],
+                            "targettable": "Locker",
+                            "targetcolumns": ["LockerID"],
+                            "fkname": "fk_PersonLocker",
+                        }
+                    ],
+                },
+                {
+                    "tablename": "Locker",
+                    "columns": [{"columnname": "LockerID", "type": "INTEGER"}],
+                    "primary_key": ["LockerID"],
+                },
+            ]
+        }
+    )
+
+
 def test_rel_ast_translation_builder_marks_direct_fk_nullable_for_optional_many_left_side() -> None:
     er_schema = ERSchema(
         entities=[
