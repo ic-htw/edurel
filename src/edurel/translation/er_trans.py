@@ -593,7 +593,7 @@ class MermaidTranslationBuilder(ERSchemaTranslationBuilder):
         self._add_association_edge(
             source=self._require_current_class_name(),
             target=global_key.targetentity,
-            target_cardinality="ONE",
+            target_cardinality="OPTIONAL_ONE",
             label=global_key_name,
         )
 
@@ -780,7 +780,7 @@ class MermaidTranslationBuilder(ERSchemaTranslationBuilder):
             self._add_valuelist_usage(source, target)
             return
         self.association_edges.append(
-            f'    {source} "0..*" -- "{self._mermaid_cardinality(target_cardinality)}" '
+            f'    {source} "1..*" -- "{self._mermaid_cardinality(target_cardinality)}" '
             f"{target} : {label}"
         )
 
