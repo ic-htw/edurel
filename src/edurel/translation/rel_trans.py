@@ -343,7 +343,8 @@ class MermaidTranslationBuilder(RelSchemaTranslationBuilder):
             labels.append("FK")
         label_suffix = f" {', '.join(labels)}" if labels else ""
         self.table_columns[table.tablename].append(
-            f"    {self._strip_sql_type_size(column.type)} {column.columnname}{label_suffix}"
+            # f"    {self._strip_sql_type_size(column.type)} {column.columnname}{label_suffix}"
+            f"    {column.type.replace(",","_")} {column.columnname}{label_suffix}"
         )
 
     def add_primary_key(self, table: Table) -> None:

@@ -682,8 +682,9 @@ class MermaidTranslationBuilder(ERSchemaTranslationBuilder):
     def _member_type(attribute_type: str | None, default: str = "INTEGER") -> str:
         if attribute_type is None:
             return default
-        stripped_type = re.sub(r"\s*\(.*\)$", "", attribute_type).strip()
-        return stripped_type or default
+        # stripped_type = re.sub(r"\s*\(.*\)$", "", attribute_type).strip()
+        changed_type = attribute_type.replace("(", "[").replace(")", "]").strip()
+        return changed_type or default
 
     @staticmethod
     def _mermaid_text(value: str) -> str:
@@ -1057,7 +1058,7 @@ class RelAstTranslationBuilder(ERSchemaTranslationBuilder):
             tablename=valuelist.valuelistname,
             columns=[
                 Column(columnname="ID", type="INTEGER"),
-                Column(columnname="Description", type="TEXT"),
+                Column(columnname="Description", type="VARCHAR(100)"),
                 Column(columnname="IsValid", type="INTEGER"),
                 Column(columnname="SortOrder", type="INTEGER"),
             ],
