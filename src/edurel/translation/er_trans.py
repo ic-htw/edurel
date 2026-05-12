@@ -676,7 +676,7 @@ class MermaidTranslationBuilder(ERSchemaTranslationBuilder):
             return "1..*"
         if cardinality == "OPTIONAL_MANY":
             return "0..*"
-        return "1"
+        return "0..1"
 
     @staticmethod
     def _member_type(attribute_type: str | None, default: str = "INTEGER") -> str:

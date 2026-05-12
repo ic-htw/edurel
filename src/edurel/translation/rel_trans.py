@@ -342,9 +342,10 @@ class MermaidTranslationBuilder(RelSchemaTranslationBuilder):
         if any(column.columnname in foreign_key.sourcecolumns for foreign_key in table.foreign_keys):
             labels.append("FK")
         label_suffix = f" {', '.join(labels)}" if labels else ""
+        nullable_suffix = '"NULL"' if column.nullable else '"NOT NULL"'
         self.table_columns[table.tablename].append(
             # f"    {self._strip_sql_type_size(column.type)} {column.columnname}{label_suffix}"
-            f"    {column.type.replace(",","_")} {column.columnname}{label_suffix}"
+            f"    {column.type.replace(",","_")} {column.columnname}{label_suffix}{nullable_suffix}"
         )
 
     def add_primary_key(self, table: Table) -> None:
