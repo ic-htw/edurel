@@ -16,12 +16,12 @@ It is designed to be used from Jupyter notebooks: every representation is availa
                                            │ ERSchemaMan
               ┌────────────────────────────┼────────────────────────────┐
               │                            │                            │
-      ER class diagram              ER YAML (normalized)          RelSchema (AST)
-        (Mermaid)                                                       │
+          ER diagram              ER YAML (normalized)          RelSchema (AST)
+          (Mermaid)                                                     │
                                                                         │ RelSchemaMan
                                        ┌────────────────┬───────────────┼────────────────┐
                                        │                │               │                │
-                                  Rel YAML         ER diagram       SQL DDL          structure
+                                  Rel YAML         Rel diagram       SQL DDL          structure
                                                    (Mermaid)     (+ INSERTs)          listing
                                                                         │
                                                                         │ DuckDbMan
@@ -33,7 +33,7 @@ It is designed to be used from Jupyter notebooks: every representation is availa
 * **Logical layer (Rel):** tables, columns, primary keys, foreign keys, datalists.
 
 Both layers have the same shape — YAML schema → AST → validation → visitor/builder translation →
-notebook facade — so what students learn on one side transfers directly to the other.
+notebook facade.
 
 ---
 
@@ -57,9 +57,10 @@ npm install -g @mermaid-js/mermaid-cli
 
 ## Quick start
 
-`er.yaml` — a tiny course-registration model:
+A tiny course-registration model:
 
-```yaml
+```python
+er_yaml = """
 entities:
 - entityname: Student
   key: StudentID
@@ -98,17 +99,18 @@ valuelists:
   - Rejected
   many_to_one_from_entities:
   - sourceentity: Enrollment
+"""
 ```
 
 ```python
 from edurel.core.er_schema_man import ERSchemaMan
 from edurel.core.rel_schema_man import RelSchemaMan
 
-er = ERSchemaMan.fromFile("er.yaml")     # parse + validate the conceptual model
+er = ERSchemaMan.fromStr(er_yaml)        # parse + validate the conceptual model
 rel = RelSchemaMan.fromAST(er.get_rel()) # derive the logical model
 
-er.display_mermaid_diagram(direction="LR")  # ER class diagram in the notebook
-rel.display_mermaid_diagram(direction="LR") # ER diagram of the derived tables
+er.display_mermaid_diagram(direction="LR")  # ER diagram in the notebook
+rel.display_mermaid_diagram(direction="LR") # Rel diagram of the derived tables
 rel.display_sql()                           # CREATE TABLE + ALTER TABLE + INSERT
 ```
 
@@ -119,12 +121,12 @@ rel.display_sql()                           # CREATE TABLE + ALTER TABLE + INSER
 Every snippet below is self-contained and was run against the model in
 [Quick start](#quick-start). Outputs are the real, unedited outputs.
 
-### 1. From ER YAML to an ER class diagram
+### 1. From ER YAML to an ER Diagram
 
 ```python
 from edurel.core.er_schema_man import ERSchemaMan
 
-er = ERSchemaMan.fromFile("er.yaml")
+er = ERSchemaMan.fromStr(er_yaml)
 print(er.get_mermaid_code(direction="LR"))
 ```
 
@@ -169,12 +171,11 @@ classDiagram
 
 Reading the class bodies: `+` is a mandatory attribute, `-` a nullable one, `**key**` /
 `**local_key**` / `**global_key**` mark identification, and `**vl**(...)` marks a valuelist that
-the class references. Entities get the grey `entityStyle`; associative entities are blue.
+the entity references. Entities get the grey `entityStyle`; associative entities are blue.
 
 Other ways to construct the manager:
 
 ```python
-ERSchemaMan.fromStr(yaml_text)                  # from a YAML string
 ERSchemaMan.fromFile("er.yaml")                 # from a file
 ERSchemaMan.fromURL("https://.../er.yaml")      # from a URL
 ERSchemaMan.fromAST(er_schema)                  # from an er_ast.ERSchema you built yourself
@@ -485,10 +486,6 @@ Snippet: SELECT FROM WHERE
 Potential fix: Add the missing table name after the clause that references a table.
 ```
 
-`edurel.utils.md` has the markdown-side counterparts: `md_sql`, `md_yaml`, `md_plain`,
-`display_md`, `display_sql`, `display_yaml`, plus `sql_extract` / `yaml_extract` for pulling fenced
-code blocks out of LLM replies. (`sql_extract` exists identically in both modules; the one in
-`utils.sql` is the one the validation/transpile path uses.)
 
 ### 9. LLM conversations
 
